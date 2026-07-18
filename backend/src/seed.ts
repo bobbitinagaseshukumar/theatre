@@ -28,6 +28,24 @@ async function seedUsers() {
     },
   });
 
+  // Optional owner admin from env (keeps real credentials out of source control).
+  // Set ADMIN_EMAIL and ADMIN_PASSWORD (e.g. in Render env vars or local .env).
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    const ownerPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+    await prisma.user.upsert({
+      where: { email: process.env.ADMIN_EMAIL.toLowerCase() },
+      update: { password: ownerPassword, role: Role.OWNER, isVerified: true },
+      create: {
+        email: process.env.ADMIN_EMAIL.toLowerCase(),
+        password: ownerPassword,
+        name: process.env.ADMIN_NAME || "Owner",
+        role: Role.OWNER,
+        isVerified: true,
+      },
+    });
+    console.log(`✅ Owner admin seeded from env (${process.env.ADMIN_EMAIL})`);
+  }
+
   const customerPassword = await bcrypt.hash("Demo@12345", 12);
   await prisma.user.upsert({
     where: { email: "demo@cinemapromax.com" },
