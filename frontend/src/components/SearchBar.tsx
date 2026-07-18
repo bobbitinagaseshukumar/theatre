@@ -12,7 +12,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const listboxId = "movie-search-suggestions";
+  const dropdownRef = useRef<HTMLFormElement>(null);
   const navigate = useNavigate();
 
   // Close suggestions dropdown when clicking outside
@@ -44,7 +45,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
         );
         setSuggestions(matches.slice(0, 5));
         setShowDropdown(true);
-      } catch (err) {
+      } catch {
         // Fallback mock suggestions for local testing
         const MOCK_TITLES = [
           { id: "m-1", title: "Aether: Rising Stars" },
@@ -70,12 +71,24 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
     navigate(`/movies/${id}`);
   };
 
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    setShowDropdown(false);
+    navigate(`/movies?search=${encodeURIComponent(trimmed)}`);
+  };
+
   return (
-    <div ref={dropdownRef} className="relative w-full max-w-[420px] h-12">
+    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-full max-w-[420px] h-12">
       <div className="relative w-full h-full group">
         {/* Search Input Box */}
         <input
           type="text"
+          aria-label="Search movies"
+          aria-autocomplete="list"
+          aria-controls={showDropdown ? listboxId : undefined}
+          aria-expanded={showDropdown}
           placeholder="Search Movies..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -94,10 +107,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
 
       {/* Autocomplete Dropdown List */}
       {showDropdown && suggestions.length > 0 && (
-        <div className="absolute top-14 left-0 right-0 z-50 rounded-xl glass-panel border border-white/10 bg-[#0d0d0d]/95 overflow-hidden shadow-glass py-2">
+        <div
+          id={listboxId}
+          role="listbox"
+          className="absolute top-14 left-0 right-0 z-50 rounded-xl glass-panel border border-white/10 bg-[#0d0d0d]/95 overflow-hidden shadow-glass py-2"
+        >
           {suggestions.map((m) => (
             <button
               key={m.id}
+              type="button"
+              role="option"
+              aria-selected="false"
               onClick={() => handleSelect(m.id)}
               className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors font-medium border-b border-white/5 last:border-none"
             >
@@ -106,7 +126,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
           ))}
         </div>
       )}
-    </div>
+    </form>
   );
 };
 

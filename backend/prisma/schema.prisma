@@ -84,6 +84,9 @@ model OTP {
   expiresAt DateTime
   isUsed    Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([email, code, isUsed, expiresAt])
+  @@index([email, createdAt])
 }
 
 model Movie {
@@ -146,6 +149,9 @@ model Showtime {
   updatedAt     DateTime       @updatedAt
   showtimeSeats ShowtimeSeat[]
   bookings      Booking[]
+
+  @@index([movieId, startTime])
+  @@index([screenId, startTime])
 }
 
 model ShowtimeSeat {
@@ -161,6 +167,9 @@ model ShowtimeSeat {
   booking      Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@unique([showtimeId, screenSeatId])
+  @@index([showtimeId, status])
+  @@index([bookingId])
+  @@index([userId, lockedUntil])
 }
 
 model Booking {
@@ -178,6 +187,9 @@ model Booking {
   updatedAt     DateTime       @updatedAt
   payments      Payment[]
   showtimeSeats ShowtimeSeat[]
+
+  @@index([userId, status, bookingDate])
+  @@index([showtimeId, status])
 }
 
 model Payment {
@@ -191,6 +203,8 @@ model Payment {
   provider      PaymentProvider @default(RAZORPAY)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+
+  @@index([bookingId, status, createdAt])
 }
 
 model FoodItem {
@@ -2585,5 +2599,4 @@ model UsageMetric {
   storageUsed Int      @default(0) // in MBs
   updatedAt   DateTime @updatedAt
 }
-
 

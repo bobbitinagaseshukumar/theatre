@@ -27,7 +27,7 @@ interface CinemaSeatProps {
   onClick: () => void;
 }
 
-const CinemaSeatIcon: React.FC<CinemaSeatProps> = ({ type, isSelected, onClick }) => {
+const CinemaSeatIcon: React.FC<CinemaSeatProps> = ({ type, seatNumber, isSelected, onClick }) => {
   let color = "#404040"; 
   let border = "rgba(255,255,255,0.1)";
   
@@ -53,50 +53,61 @@ const CinemaSeatIcon: React.FC<CinemaSeatProps> = ({ type, isSelected, onClick }
 
   if (type === "COUPLE") {
     return (
-      <svg 
+      <button
+        type="button"
         onClick={onClick}
-        className={`w-14 h-9 cursor-pointer transition-all duration-300 hover:scale-108 hover:-translate-y-0.5 ${
+        aria-label={`${seatNumber} couple seat, ${isSelected ? "selected" : "available"}`}
+        aria-pressed={isSelected}
+        className={`flex h-11 w-16 items-center justify-center rounded-md transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 ${
           isSelected ? "filter drop-shadow-[0_0_8px_rgba(229,9,20,0.5)] animate-pulse" : ""
         }`} 
-        viewBox="0 0 100 50"
       >
-        <rect x="2" y="10" width="96" height="35" rx="10" fill={color} stroke={border} strokeWidth="2" />
-        <rect x="8" y="2" width="84" height="15" rx="6" fill={color} stroke={border} strokeWidth="2" />
-        <rect x="2" y="15" width="8" height="25" rx="3" fill="#262626" opacity="0.6" />
-        <rect x="90" y="15" width="8" height="25" rx="3" fill="#262626" opacity="0.6" />
-        <rect x="46" y="15" width="8" height="25" rx="3" fill="#262626" opacity="0.6" />
-        <path d="M50 25 C48 22, 45 22, 45 25 C45 28, 50 31, 50 31 C50 31, 55 28, 55 25 C55 22, 52 22, 50 25 Z" fill={isSelected ? "#ffffff" : "#f43f5e"} />
-      </svg>
+        <svg aria-hidden className="h-9 w-14" viewBox="0 0 100 50">
+          <rect x="2" y="10" width="96" height="35" rx="10" fill={color} stroke={border} strokeWidth="2" />
+          <rect x="8" y="2" width="84" height="15" rx="6" fill={color} stroke={border} strokeWidth="2" />
+          <rect x="2" y="15" width="8" height="25" rx="3" fill="#262626" opacity="0.6" />
+          <rect x="90" y="15" width="8" height="25" rx="3" fill="#262626" opacity="0.6" />
+          <rect x="46" y="15" width="8" height="25" rx="3" fill="#262626" opacity="0.6" />
+          <path d="M50 25 C48 22, 45 22, 45 25 C45 28, 50 31, 50 31 C50 31, 55 28, 55 25 C55 22, 52 22, 50 25 Z" fill={isSelected ? "#ffffff" : "#f43f5e"} />
+        </svg>
+      </button>
     );
   }
 
   return (
-    <svg 
+    <button
+      type="button"
       onClick={onClick}
-      className={`w-8 h-8 cursor-pointer transition-all duration-300 hover:scale-110 hover:-translate-y-1 ${
+      disabled={type === "BOOKED" || type === "BLOCKED"}
+      aria-label={`${seatNumber} ${type.toLowerCase()} seat, ${
+        type === "BOOKED" || type === "BLOCKED" ? "unavailable" : isSelected ? "selected" : "available"
+      }`}
+      aria-pressed={isSelected}
+      className={`flex h-11 w-11 items-center justify-center rounded-md transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-75 ${
         isSelected ? "filter drop-shadow-[0_0_8px_rgba(229,9,20,0.5)]" : ""
       }`} 
-      viewBox="0 0 40 40"
     >
-      <rect x="4" y="2" width="32" height="24" rx="8" fill={color} stroke={border} strokeWidth="1.5" />
-      <rect x="2" y="16" width="36" height="18" rx="6" fill={color} stroke={border} strokeWidth="1.5" />
-      <rect x="1" y="14" width="5" height="18" rx="2" fill="#262626" opacity="0.7" />
-      <rect x="34" y="14" width="5" height="18" rx="2" fill="#262626" opacity="0.7" />
-      <line x1="8" y1="26" x2="32" y2="26" stroke="rgba(255,255,255,0.1)" strokeWidth="2" strokeLinecap="round" />
+      <svg aria-hidden className="h-8 w-8" viewBox="0 0 40 40">
+        <rect x="4" y="2" width="32" height="24" rx="8" fill={color} stroke={border} strokeWidth="1.5" />
+        <rect x="2" y="16" width="36" height="18" rx="6" fill={color} stroke={border} strokeWidth="1.5" />
+        <rect x="1" y="14" width="5" height="18" rx="2" fill="#262626" opacity="0.7" />
+        <rect x="34" y="14" width="5" height="18" rx="2" fill="#262626" opacity="0.7" />
+        <line x1="8" y1="26" x2="32" y2="26" stroke="rgba(255,255,255,0.1)" strokeWidth="2" strokeLinecap="round" />
 
-      {type === "BLOCKED" && (
-        <path d="M16 16 H24 V22 H16 Z M18 16 V13 A2 2 0 0 1 22 13 V16" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-      )}
-      {type === "BOOKED" && (
-        <path d="M12 12 L28 28 M28 12 L12 28" stroke="#7f1d1d" strokeWidth="2" strokeLinecap="round" />
-      )}
-      {isSelected && (
-        <path d="M14 20 L18 24 L26 16" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      )}
-      {type === "VIP" && !isSelected && (
-        <circle cx="20" cy="10" r="3" fill="#d4af37" />
-      )}
-    </svg>
+        {type === "BLOCKED" && (
+          <path d="M16 16 H24 V22 H16 Z M18 16 V13 A2 2 0 0 1 22 13 V16" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+        )}
+        {type === "BOOKED" && (
+          <path d="M12 12 L28 28 M28 12 L12 28" stroke="#7f1d1d" strokeWidth="2" strokeLinecap="round" />
+        )}
+        {isSelected && (
+          <path d="M14 20 L18 24 L26 16" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+        {type === "VIP" && !isSelected && (
+          <circle cx="20" cy="10" r="3" fill="#d4af37" />
+        )}
+      </svg>
+    </button>
   );
 };
 
@@ -281,7 +292,7 @@ const Booking: React.FC = () => {
       } else {
         toast.error("Could not find continuous seats matching group size.");
       }
-    } catch (err) {
+    } catch {
       toast.error("Selection calculation failed. Choose seats manually.");
     }
   };
@@ -336,7 +347,7 @@ const Booking: React.FC = () => {
           price: seat.price
         }));
       }
-    } catch (err) {
+    } catch {
       // Fallback direct select
       dispatch(toggleSeatSelection({
         id: seat.id,

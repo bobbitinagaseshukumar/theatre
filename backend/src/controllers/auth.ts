@@ -8,10 +8,12 @@ import { Role } from "@prisma/client";
 
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkeyforjwttokencineversepro";
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
 const generateToken = (id: string, email: string, role: Role) => {
   return jwt.sign({ id, email, role }, JWT_SECRET, {
-    expiresAt: "7d", // wait, jwt.sign uses expiresIn, let's fix that
-  } as any);
+    expiresIn: "7d",
+  });
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -23,7 +25,13 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (String(password).length < 8) {
+      res.status(400).json({ message: "Password must be at least 8 characters long." });
+      return;
+    }
+
+    const normalizedEmail = normalizeEmail(String(email));
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
       res.status(400).json({ message: "Email is already registered." });
       return;
@@ -37,8 +45,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: String(name).trim(),
+        email: normalizedEmail,
         password: hashedPassword,
         phone,
         role,
@@ -51,7 +59,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     await prisma.oTP.create({
       data: {
-        email,
+        email: normalizedEmail,
         code: otpCode,
         expiresAt,
       },
@@ -59,7 +67,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const emailHtml = getOTPHtml(otpCode, name);
     await sendEmail({
-      to: email,
+      to: normalizedEmail,
       subject: "Verify your CineVerse Pro Account",
       html: emailHtml,
     });
@@ -84,7 +92,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = normalizeEmail(String(email));
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       res.status(401).json({ message: "Invalid email or password." });
       return;
@@ -104,14 +113,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
       await prisma.oTP.create({
         data: {
-          email,
+          email: normalizedEmail,
           code: otpCode,
           expiresAt,
         },
       });
 
       await sendEmail({
-        to: email,
+        to: normalizedEmail,
         subject: "Verify your CineVerse Pro Account",
         html: getOTPHtml(otpCode, user.name),
       });
@@ -124,9 +133,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = generateToken(user.id, user.email, user.role);
 
     res.status(200).json({
       token,
@@ -153,11 +160,13 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const normalizedEmail = normalizeEmail(String(email));
+
     // Find the latest valid unused OTP for this email
     const dbOtp = await prisma.oTP.findFirst({
       where: {
-        email,
-        code,
+        email: normalizedEmail,
+        code: String(code).trim(),
         isUsed: false,
         expiresAt: { gt: new Date() },
       },
@@ -177,13 +186,11 @@ export const verifyOTP = async (req: Request, res: Response): Promise<void> => {
 
     // Update user to verified
     const user = await prisma.user.update({
-      where: { email },
+      where: { email: normalizedEmail },
       data: { isVerified: true },
     });
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const token = generateToken(user.id, user.email, user.role);
 
     res.status(200).json({
       message: "Email verified successfully.",
@@ -211,7 +218,8 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = normalizeEmail(String(email));
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
       res.status(404).json({ message: "No user found with this email address." });
       return;
@@ -222,14 +230,14 @@ export const resendOTP = async (req: Request, res: Response): Promise<void> => {
 
     await prisma.oTP.create({
       data: {
-        email,
+        email: normalizedEmail,
         code: otpCode,
         expiresAt,
       },
     });
 
     await sendEmail({
-      to: email,
+      to: normalizedEmail,
       subject: "CineVerse Pro Verification Code",
       html: getOTPHtml(otpCode, user.name),
     });

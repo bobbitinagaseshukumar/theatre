@@ -2,10 +2,70 @@ import { Router, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../index";
 import { protect, AuthenticatedRequest } from "../middleware/auth";
-import { BookingStatus, PaymentStatus } from "@prisma/client";
+import { BookingStatus, PaymentStatus, ShowtimeSeatStatus } from "@prisma/client";
 import { sendEmail } from "../utils/sendEmail";
 
 const router = Router();
+
+const confirmBookingPayment = async ({
+  bookingId,
+  userId,
+  amount,
+  transactionId,
+  signature,
+}: {
+  bookingId: string;
+  userId: string;
+  amount: number;
+  transactionId: string;
+  signature: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      include: { payments: true },
+    });
+
+    if (!booking) throw new Error("Booking record not found.");
+    if (booking.userId !== userId) throw new Error("You do not have access to this booking.");
+    if (booking.status === BookingStatus.CANCELLED) throw new Error("Cancelled bookings cannot be paid.");
+
+    const existingSuccess = booking.payments.find((payment) => payment.status === PaymentStatus.SUCCESS);
+    if (booking.status === BookingStatus.CONFIRMED && existingSuccess) {
+      return { confirmedNow: false };
+    }
+
+    const safeAmount = Number.isFinite(amount) && amount > 0 ? amount : booking.totalPrice;
+    const existingTransaction = await tx.payment.findFirst({ where: { transactionId } });
+
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: { status: BookingStatus.CONFIRMED },
+    });
+
+    await tx.showtimeSeat.updateMany({
+      where: { bookingId, userId, status: ShowtimeSeatStatus.LOCKED },
+      data: {
+        status: ShowtimeSeatStatus.BOOKED,
+        lockedUntil: null,
+      },
+    });
+
+    if (!existingTransaction) {
+      await tx.payment.create({
+        data: {
+          bookingId,
+          amount: safeAmount,
+          status: PaymentStatus.SUCCESS,
+          transactionId,
+          signature,
+        },
+      });
+    }
+
+    return { confirmedNow: true };
+  });
+};
 
 // Helper to send ticket confirmation email
 const sendTicketEmail = async (bookingId: string) => {
@@ -94,25 +154,17 @@ router.post("/verify", protect, async (req: AuthenticatedRequest, res: Response)
       return;
     }
 
-    // Update booking status and save payment record in transaction
-    await prisma.$transaction([
-      prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.CONFIRMED },
-      }),
-      prisma.payment.create({
-        data: {
-          bookingId,
-          amount: (await prisma.booking.findUnique({ where: { id: bookingId } }))?.totalPrice || 0,
-          status: PaymentStatus.SUCCESS,
-          transactionId: razorpayPaymentId,
-          signature: razorpaySignature,
-        },
-      }),
-    ]);
+    const result = await confirmBookingPayment({
+      bookingId,
+      userId: req.user!.id,
+      amount: 0,
+      transactionId: razorpayPaymentId,
+      signature: razorpaySignature,
+    });
 
-    // Send ticket via email
-    await sendTicketEmail(bookingId);
+    if (result.confirmedNow) {
+      await sendTicketEmail(bookingId);
+    }
 
     res.status(200).json({ message: "Payment verified and booking confirmed successfully." });
   } catch (error: any) {
@@ -131,24 +183,22 @@ router.post("/mock-success", protect, async (req: AuthenticatedRequest, res: Res
       res.status(404).json({ message: "Booking record not found." });
       return;
     }
+    if (booking.userId !== req.user?.id) {
+      res.status(403).json({ message: "You do not have access to this booking." });
+      return;
+    }
 
-    await prisma.$transaction([
-      prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: BookingStatus.CONFIRMED },
-      }),
-      prisma.payment.create({
-        data: {
-          bookingId,
-          amount: booking.totalPrice,
-          status: PaymentStatus.SUCCESS,
-          transactionId: "mock-txn-" + Math.floor(Math.random() * 100000000),
-          signature: "mock-sig-verified-success-ok",
-        },
-      }),
-    ]);
+    const result = await confirmBookingPayment({
+      bookingId,
+      userId: req.user!.id,
+      amount: booking.totalPrice,
+      transactionId: "mock-txn-" + bookingId,
+      signature: "mock-sig-verified-success-ok",
+    });
 
-    await sendTicketEmail(bookingId);
+    if (result.confirmedNow) {
+      await sendTicketEmail(bookingId);
+    }
 
     res.status(200).json({ message: "Mock transaction processed and verified successfully." });
   } catch (error: any) {
@@ -163,6 +213,13 @@ router.post("/create-order", protect, async (req: AuthenticatedRequest, res: Res
     const { bookingId, amount, currency, gateway } = req.body;
     if (!bookingId || !amount || !gateway) {
       return res.status(400).json({ message: "Required parameters are missing." });
+    }
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking || booking.userId !== req.user?.id) {
+      return res.status(404).json({ message: "Booking record not found." });
+    }
+    if (Number(amount) !== booking.totalPrice) {
+      return res.status(400).json({ message: "Payment amount does not match booking total." });
     }
     const order = await prisma.paymentOrder.create({
       data: {
@@ -202,6 +259,16 @@ router.post("/refund", protect, async (req: AuthenticatedRequest, res: Response)
     const { transactionId, amount, reason } = req.body;
     if (!transactionId || !amount) {
       return res.status(400).json({ message: "transactionId and amount are required." });
+    }
+    const payment = await prisma.payment.findUnique({
+      where: { transactionId },
+      include: { booking: true },
+    });
+    if (!payment || payment.booking.userId !== req.user?.id) {
+      return res.status(404).json({ message: "Payment record not found." });
+    }
+    if (parseFloat(amount) > payment.amount) {
+      return res.status(400).json({ message: "Refund amount cannot exceed payment amount." });
     }
     const refund = await prisma.refund.create({
       data: {
@@ -286,6 +353,17 @@ router.post("/wallet/pay", protect, async (req: AuthenticatedRequest, res: Respo
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized." });
 
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking || booking.userId !== userId) {
+      return res.status(404).json({ message: "Booking record not found." });
+    }
+    if (booking.status !== BookingStatus.PENDING) {
+      return res.status(400).json({ message: "Only pending bookings can be paid from wallet." });
+    }
+    if (Number(amount) !== booking.totalPrice) {
+      return res.status(400).json({ message: "Payment amount does not match booking total." });
+    }
+
     const wallet = await prisma.wallet.findUnique({
       where: { customerId: userId }
     });
@@ -294,35 +372,44 @@ router.post("/wallet/pay", protect, async (req: AuthenticatedRequest, res: Respo
       return res.status(400).json({ message: "Insufficient wallet balance." });
     }
 
-    const updatedWallet = await prisma.wallet.update({
-      where: { id: wallet.id },
-      data: { balance: { decrement: parseFloat(amount) } }
-    });
+    const updatedWallet = await prisma.$transaction(async (tx) => {
+      const debit = await tx.wallet.updateMany({
+        where: { id: wallet.id, balance: { gte: parseFloat(amount) } },
+        data: { balance: { decrement: parseFloat(amount) } }
+      });
+      if (debit.count !== 1) throw new Error("Insufficient wallet balance.");
 
-    await prisma.walletTransaction.create({
-      data: {
-        walletId: wallet.id,
-        type: "DEBIT",
-        amount: parseFloat(amount),
-        description: `Payment for booking ${bookingId}`
-      }
-    });
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type: "DEBIT",
+          amount: parseFloat(amount),
+          description: `Payment for booking ${bookingId}`
+        }
+      });
 
-    await prisma.$transaction([
-      prisma.booking.update({
+      await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.CONFIRMED }
-      }),
-      prisma.payment.create({
+      });
+
+      await tx.showtimeSeat.updateMany({
+        where: { bookingId, userId, status: ShowtimeSeatStatus.LOCKED },
+        data: { status: ShowtimeSeatStatus.BOOKED, lockedUntil: null }
+      });
+
+      await tx.payment.create({
         data: {
           bookingId,
           amount: parseFloat(amount),
           status: PaymentStatus.SUCCESS,
-          transactionId: "wallet-pay-" + Date.now(),
+          transactionId: "wallet-pay-" + bookingId,
           signature: "wallet-sig-verified"
         }
-      })
-    ]);
+      });
+
+      return tx.wallet.findUnique({ where: { id: wallet.id } });
+    });
 
     return res.json({ success: true, wallet: updatedWallet });
   } catch (error: any) {

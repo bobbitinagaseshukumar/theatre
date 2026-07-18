@@ -61,7 +61,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 relative overflow-hidden py-12">
+    <div className="min-h-[calc(100vh-76px)] sm:min-h-[80vh] flex items-start sm:items-center justify-center px-3 sm:px-4 relative overflow-hidden py-6 sm:py-12">
       {/* Decorative Blur Spheres */}
       <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-secondary/10 rounded-full blur-[100px] pointer-events-none" />
@@ -70,32 +70,33 @@ const Login: React.FC = () => {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md p-8 rounded-2xl glass-panel relative z-10 border border-white/10 shadow-glass"
+        className="w-full max-w-md p-6 sm:p-8 rounded-2xl relative z-10 border border-white/20 shadow-2xl bg-[#09090c] backdrop-blur-2xl"
       >
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-heading font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-heading font-extrabold tracking-tight text-white">
             Welcome Back
           </h2>
-          <p className="text-gray-400 mt-2 text-sm">
+          <p className="text-gray-300 mt-2 text-sm font-medium">
             Login to your premium ticket booking profile
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
           {/* Email */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
               Email Address
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-500">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400">
                 <Mail className="w-5 h-5" />
               </span>
               <input
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 {...formRegister("email")}
-                className="w-full pl-11 pr-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all focus:ring-1 focus:ring-primary/40 text-sm"
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-black/80 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-primary transition-all focus:ring-2 focus:ring-primary/50 text-sm font-medium"
               />
             </div>
             {errors.email && (
@@ -119,6 +120,7 @@ const Login: React.FC = () => {
               </span>
               <input
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 placeholder="••••••••"
                 {...formRegister("password")}
                 className="w-full pl-11 pr-12 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all focus:ring-1 focus:ring-primary/40 text-sm"

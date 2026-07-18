@@ -1,16 +1,36 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../index";
-import { MovieStatus } from "@prisma/client";
+import { MovieStatus, Role } from "@prisma/client";
+import { protect, restrictTo } from "../middleware/auth";
 
 const router = Router();
+
+const normalizeStringArray = (value: unknown, fallback: string[] = []) => {
+  if (Array.isArray(value)) return value.map(String).map((item) => item.trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
+  return fallback;
+};
 
 // GET all movies
 router.get("/", async (req: Request, res: Response) => {
   try {
+    const { search, status } = req.query;
     const movies = await prisma.movie.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        ...(status ? { status: String(status).toUpperCase() as MovieStatus } : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: String(search), mode: "insensitive" } },
+                { description: { contains: String(search), mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { releaseDate: "desc" },
     });
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
     res.status(200).json(movies);
   } catch (error) {
     // Return empty list so client does not crash, fallback to mock on client
@@ -42,27 +62,75 @@ router.get("/:id", async (req: Request, res: Response) => {
 });
 
 // POST add movie (Owner only)
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", protect, restrictTo(Role.OWNER, Role.SUPER_ADMIN, Role.MANAGER), async (req: Request, res: Response) => {
   try {
-    const { title, description, posterUrl, bannerUrl, duration, releaseDate, language, genre, ageRestriction, cast, status } = req.body;
+    const { title, description, posterUrl, bannerUrl, trailerUrl, duration, releaseDate, language, genre, ageRestriction, cast, status, rating } = req.body;
+    if (!title || !description || !posterUrl || !duration || !releaseDate) {
+      res.status(400).json({ message: "Missing required movie fields." });
+      return;
+    }
     const movie = await prisma.movie.create({
       data: {
-        title,
-        description,
-        posterUrl,
+        title: String(title).trim(),
+        description: String(description).trim(),
+        posterUrl: String(posterUrl).trim(),
         bannerUrl,
+        trailerUrl,
         duration: parseInt(duration),
         releaseDate: new Date(releaseDate),
-        language,
-        genre,
-        ageRestriction,
+        language: normalizeStringArray(language, ["English"]),
+        genre: normalizeStringArray(genre, ["Drama"]),
+        ageRestriction: ageRestriction || "UA",
         cast: cast || [],
-        status: status as MovieStatus,
+        rating: Number(rating) || 0,
+        status: (status as MovieStatus) || MovieStatus.NOW_SHOWING,
       },
     });
     res.status(201).json({ message: "Movie created successfully", movie });
   } catch (error: any) {
     res.status(500).json({ message: "Failed to create movie.", error: error.message });
+  }
+});
+
+router.patch("/:id", protect, restrictTo(Role.OWNER, Role.SUPER_ADMIN, Role.MANAGER), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, posterUrl, bannerUrl, trailerUrl, duration, releaseDate, language, genre, ageRestriction, cast, status, rating, isActive } = req.body;
+    const movie = await prisma.movie.update({
+      where: { id },
+      data: {
+        title: title ? String(title).trim() : undefined,
+        description: description ? String(description).trim() : undefined,
+        posterUrl: posterUrl ? String(posterUrl).trim() : undefined,
+        bannerUrl: bannerUrl === undefined ? undefined : bannerUrl,
+        trailerUrl: trailerUrl === undefined ? undefined : trailerUrl,
+        duration: duration ? parseInt(duration) : undefined,
+        releaseDate: releaseDate ? new Date(releaseDate) : undefined,
+        language: language === undefined ? undefined : normalizeStringArray(language, ["English"]),
+        genre: genre === undefined ? undefined : normalizeStringArray(genre, ["Drama"]),
+        ageRestriction,
+        cast,
+        rating: rating === undefined ? undefined : Number(rating),
+        status: status ? (status as MovieStatus) : undefined,
+        isActive,
+      },
+    });
+    res.status(200).json({ message: "Movie updated successfully", movie });
+  } catch (error: any) {
+    res.status(500).json({ message: "Failed to update movie.", error: error.message });
+  }
+});
+
+router.delete("/:id", protect, restrictTo(Role.OWNER, Role.SUPER_ADMIN, Role.MANAGER), async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.movie.update({
+      where: { id },
+      data: { isActive: false, status: MovieStatus.ARCHIVED },
+    });
+    res.status(200).json({ message: "Movie removed successfully." });
+  } catch (error: any) {
+    res.status(500).json({ message: "Failed to remove movie.", error: error.message });
   }
 });
 

@@ -52,8 +52,15 @@ const MOCK_MOVIES: ListingMovie[] = [
 const PAGE_SIZE = 10;
 
 const Movies: React.FC = () => {
-  const [movies, setMovies] = useState<ListingMovie[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [movies, setMovies] = useState<ListingMovie[]>(() => {
+    try {
+      const cached = window.localStorage.getItem("cpm_movies_cache");
+      return cached ? JSON.parse(cached) : MOCK_MOVIES;
+    } catch {
+      return MOCK_MOVIES;
+    }
+  });
+  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<MovieFilters>(EMPTY_FILTERS);
   const [wishlist, setWishlist] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState(PAGE_SIZE);
@@ -61,19 +68,29 @@ const Movies: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    (async () => {
+    const hasInitialMovies = movies.length > 0;
+    const fetchMoviesList = async () => {
       try {
         const res = await API.get("/movies");
-        if (active && res.data?.length) setMovies(res.data);
-        else if (active) setMovies(MOCK_MOVIES);
+        if (active && res.data?.length) {
+          setMovies(res.data);
+          window.localStorage.setItem("cpm_movies_cache", JSON.stringify(res.data));
+        } else if (active && !hasInitialMovies) setMovies(MOCK_MOVIES);
       } catch {
-        if (active) setMovies(MOCK_MOVIES);
-      } finally {
-        if (active) setLoading(false);
+        if (active && !hasInitialMovies) setMovies(MOCK_MOVIES);
       }
-    })();
+    };
+    
+    if (!hasInitialMovies) setLoading(true);
+    fetchMoviesList().finally(() => {
+      if (active) setLoading(false);
+    });
+
+    const pollInterval = setInterval(fetchMoviesList, 5000);
+
     return () => {
       active = false;
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -126,7 +143,11 @@ const Movies: React.FC = () => {
   const toggleWishlist = (id: string) =>
     setWishlist((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
 

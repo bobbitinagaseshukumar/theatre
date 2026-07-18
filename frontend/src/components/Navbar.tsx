@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { Bell, LogOut, LayoutDashboard, User, ChevronDown, Ticket } from "lucide-react";
+import { Bell, LogOut, LayoutDashboard, User, ChevronDown, Ticket, Menu, X } from "lucide-react";
 import type { RootState } from "../redux/store";
 import { logout } from "../redux/authSlice";
 import SearchBar from "./SearchBar";
@@ -14,6 +14,7 @@ const Navbar: React.FC = () => {
   const [logoRotation, setLogoRotation] = useState({ x: 0, y: 0 });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
@@ -64,21 +65,29 @@ const Navbar: React.FC = () => {
 
   const isAdmin = user && ["OWNER", "SUPER_ADMIN", "MANAGER", "STAFF"].includes(user.role);
 
+  useEffect(() => {
+    setMobileOpen(false);
+    setShowProfileMenu(false);
+    setShowNotifications(false);
+  }, [location.pathname, location.search]);
+
   return (
     <nav 
-      className={`fixed top-0 left-0 right-0 h-[90px] z-50 transition-all duration-500 border-b ${
+      aria-label="Primary navigation"
+      className={`fixed top-0 left-0 right-0 h-[76px] sm:h-[90px] z-50 transition-all duration-500 border-b ${
         isScrolled 
           ? "glass-panel border-white/5 bg-[#050505]/75 backdrop-blur-[25px] shadow-glass" 
           : "bg-transparent border-transparent"
       }`}
     >
-      <div className="max-w-[1600px] mx-auto h-full px-10 flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto h-full px-3 sm:px-6 lg:px-10 flex items-center justify-between">
         
         {/* LEFT: 3D animated Logo */}
         <div className="flex items-center shrink-0">
           <Link 
             to="/" 
             className="flex items-center gap-3 perspective-500"
+            aria-label="Cinema Pro Max home"
             onMouseMove={handleLogoMouseMove}
             onMouseLeave={handleLogoMouseLeave}
           >
@@ -92,7 +101,7 @@ const Navbar: React.FC = () => {
             >
               <span className="font-heading font-extrabold text-white text-2xl" style={{ transform: "translateZ(10px)" }}>C</span>
             </motion.div>
-            <span className="font-heading font-extrabold text-2xl tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-primary select-none">
+            <span className="hidden sm:inline font-heading font-extrabold text-2xl tracking-widest bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-primary select-none">
               CINE<span className="text-primary glow-text-red">VERSE</span>
             </span>
           </Link>
@@ -106,6 +115,7 @@ const Navbar: React.FC = () => {
               <Link
                 key={item.name}
                 to={item.path}
+                aria-current={active ? "page" : undefined}
                 className="relative py-2 group text-sm font-semibold tracking-wide uppercase transition-all duration-300 hover:text-white"
               >
                 <div className="transition-transform duration-300 group-hover:-translate-y-0.5 text-gray-300 group-hover:text-white flex flex-col items-center">
@@ -123,7 +133,7 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* RIGHT: Search & User Controls */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-1.5 sm:gap-4 lg:gap-6">
           
           {/* Autocomplete Search Bar */}
           <div className="hidden md:block">
@@ -137,6 +147,8 @@ const Navbar: React.FC = () => {
           <div className="relative">
             <button 
               onClick={() => setShowNotifications(!showNotifications)}
+              aria-label="Open notifications"
+              aria-expanded={showNotifications}
               className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-accent hover:text-accent transition-all cursor-pointer text-gray-300 relative"
             >
               <Bell className="w-5 h-5" />
@@ -147,7 +159,7 @@ const Navbar: React.FC = () => {
 
             {/* Notification Drawer Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 top-12 z-50 w-80 rounded-xl glass-panel border border-white/10 bg-[#0d0d0d]/95 overflow-hidden shadow-glass py-2 font-number">
+              <div className="absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] rounded-xl glass-panel border border-white/10 bg-[#0d0d0d]/95 overflow-hidden shadow-glass py-2 font-number">
                 <div className="px-4 py-2 border-b border-white/5 font-heading text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Announcements & Alerts
                 </div>
@@ -170,6 +182,8 @@ const Navbar: React.FC = () => {
             <div className="relative">
               <button 
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
+                aria-label="Open account menu"
+                aria-expanded={showProfileMenu}
                 className="flex items-center gap-2 p-1.5 rounded-full bg-white/5 border border-white/10 hover:border-accent transition-all cursor-pointer text-gray-300"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-slate-700 to-slate-900 flex items-center justify-center font-heading font-extrabold text-accent text-xs">
@@ -218,16 +232,106 @@ const Navbar: React.FC = () => {
           ) : (
             <Link
               to="/login"
-              className="px-6 py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-sm tracking-wide shadow-redGlow hover:scale-102 transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-2 sm:px-6 sm:py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs sm:text-sm tracking-wide shadow-redGlow hover:scale-102 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
             >
               <User className="w-4 h-4" />
-              Sign In
+              <span className="hidden min-[380px]:inline">Sign In</span>
             </Link>
           )}
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen((open) => !open)}
+            aria-label="Open mobile menu"
+            aria-expanded={mobileOpen}
+            className="inline-flex lg:hidden items-center justify-center rounded-lg border border-white/10 bg-white/5 p-2 text-gray-300 hover:border-accent hover:text-white"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
 
         </div>
 
       </div>
+      {mobileOpen && (
+        <div className="lg:hidden border-t border-white/10 bg-[#050505]/98 px-4 pb-5 pt-3 shadow-glass backdrop-blur-2xl">
+          <div className="mb-3 md:hidden">
+            <SearchBar />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {menuItems.map((item) => {
+              const active = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
+              return (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  aria-current={active ? "page" : undefined}
+                  className={`rounded-xl border px-3 py-3 text-sm font-bold ${
+                    active
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-white/10 bg-white/5 text-gray-300"
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* User Profile / Auth buttons for mobile */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            {user ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 px-3 py-2 bg-white/5 rounded-xl border border-white/5">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-slate-700 to-slate-900 flex items-center justify-center font-heading font-extrabold text-accent text-xs">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-xs truncate max-w-[160px]">{user.name}</div>
+                    <div className="text-[10px] text-gray-500 truncate max-w-[160px]">{user.email}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white"
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5 text-secondary" /> CMS
+                    </Link>
+                  )}
+                  <Link
+                    to="/profile"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white"
+                  >
+                    <Ticket className="w-3.5 h-3.5 text-accent" /> Tickets
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-xs font-bold text-primary hover:bg-primary/20 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Logout
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/login"
+                  className="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs uppercase tracking-wider shadow-redGlow flex items-center justify-center gap-1.5"
+                >
+                  <User className="w-4 h-4" /> Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="w-full py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center"
+                >
+                  Create Account
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

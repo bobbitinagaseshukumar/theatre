@@ -81,10 +81,11 @@ const Home: React.FC = () => {
 
   // Load dynamically from database
   useEffect(() => {
+    let active = true;
     const fetchHomeMovies = async () => {
       try {
         const res = await API.get("/movies");
-        if (res.data && res.data.length > 0) {
+        if (active && res.data && res.data.length > 0) {
           // Map default glow colors to dynamic listings
           const mapped = res.data.map((m: any, idx: number) => ({
             ...m,
@@ -97,6 +98,11 @@ const Home: React.FC = () => {
       }
     };
     fetchHomeMovies();
+    const pollInterval = setInterval(fetchHomeMovies, 5000);
+    return () => {
+      active = false;
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const nowShowingMovies = movies.filter((m) => m.status === "NOW_SHOWING");
@@ -311,11 +317,47 @@ const Home: React.FC = () => {
         </div>
       )}
 
+      {/* Visual Category Quick-Links Menu */}
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-10 py-6 -mt-8 relative z-20">
+        <div className="p-4 rounded-2xl bg-black/60 border border-white/5 backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Quick Navigation</span>
+            <span className="text-xs text-white font-bold">Discover Cinema Features</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => {
+                document.getElementById("featured-movies")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-primary text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-white transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
+            >
+              🎬 Now Showing
+            </button>
+            <button
+              onClick={() => {
+                document.getElementById("upcoming-movies")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-primary text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-white transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
+            >
+              📅 Upcoming Releases
+            </button>
+            <button
+              onClick={() => {
+                document.getElementById("discounts-offers")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:border-primary text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-white transition-all cursor-pointer flex items-center gap-2 hover:scale-105"
+            >
+              🏷️ Special Discounts
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* QUICK STATS — animated counters on scroll */}
       <QuickStats />
 
       {/* 2. FEATURED MOVIES / NOW SHOWING (Horizontal Carousel) */}
-      <div className="max-w-[1600px] mx-auto px-10 space-y-16">
+      <div id="featured-movies" className="max-w-[1600px] mx-auto px-10 space-y-16">
         <div>
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary glow-text-red font-number">
             Now Showing
@@ -390,10 +432,14 @@ const Home: React.FC = () => {
       </div>
 
       {/* Offers & Promotions Section */}
-      <OffersSection />
+      <div id="discounts-offers">
+        <OffersSection />
+      </div>
 
       {/* Upcoming Movies Section */}
-      <UpcomingMoviesSection />
+      <div id="upcoming-movies">
+        <UpcomingMoviesSection />
+      </div>
 
       {/* Trending Movies (design-system MovieCard with 3D tilt) */}
       <TrendingSection movies={movies} />

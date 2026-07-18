@@ -110,7 +110,7 @@ const Payment: React.FC = () => {
       // 1. Create Pending Booking on Backend
       const bookingData = {
         showtimeId: showtime.id,
-        seatNumbers: selectedSeats.map((s) => s.seatNumber),
+        seatNumbers: selectedSeats.map((s) => s.id),
         foodItems: foodItems.map((f) => ({ foodItemId: f.id, quantity: f.quantity, price: f.price })),
         couponCode: appliedCoupon?.code,
         totalPrice: finalTotal + walletDeduction, // total booking value
@@ -119,7 +119,7 @@ const Payment: React.FC = () => {
       let response;
       try {
         response = await API.post("/bookings", bookingData);
-      } catch (err) {
+      } catch {
         response = { data: { bookingId: "mock-bk-" + Math.floor(Math.random() * 100000) } };
       }
 

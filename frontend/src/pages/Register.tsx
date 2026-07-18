@@ -57,7 +57,7 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 relative overflow-hidden py-12">
+    <div className="min-h-[calc(100vh-76px)] sm:min-h-[80vh] flex items-start sm:items-center justify-center px-3 sm:px-4 relative overflow-hidden py-6 sm:py-12">
       {/* Decorative Blur Spheres */}
       <div className="absolute top-1/4 left-1/4 w-[300px] h-[300px] bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-secondary/10 rounded-full blur-[100px] pointer-events-none" />
@@ -66,10 +66,10 @@ const Register: React.FC = () => {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="w-full max-w-md p-8 rounded-2xl glass-panel relative z-10 border border-white/10 shadow-glass"
+        className="w-full max-w-md p-5 sm:p-8 rounded-2xl glass-panel relative z-10 border border-white/10 shadow-glass bg-black/85"
       >
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-heading font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+        <div className="text-center mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-heading font-extrabold tracking-tight text-white">
             Create Account
           </h2>
           <p className="text-gray-400 mt-2 text-sm">
@@ -89,6 +89,7 @@ const Register: React.FC = () => {
               </span>
               <input
                 type="text"
+                autoComplete="name"
                 placeholder="John Doe"
                 {...formRegister("name")}
                 className="w-full pl-11 pr-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all focus:ring-1 focus:ring-primary/40 text-sm"
@@ -110,6 +111,7 @@ const Register: React.FC = () => {
               </span>
               <input
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 {...formRegister("email")}
                 className="w-full pl-11 pr-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all focus:ring-1 focus:ring-primary/40 text-sm"
@@ -131,6 +133,7 @@ const Register: React.FC = () => {
               </span>
               <input
                 type="tel"
+                autoComplete="tel"
                 placeholder="9876543210"
                 {...formRegister("phone")}
                 className="w-full pl-11 pr-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all focus:ring-1 focus:ring-primary/40 text-sm"
@@ -152,6 +155,7 @@ const Register: React.FC = () => {
               </span>
               <input
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
                 {...formRegister("password")}
                 className="w-full pl-11 pr-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-all focus:ring-1 focus:ring-primary/40 text-sm"

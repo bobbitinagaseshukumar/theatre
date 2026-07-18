@@ -7,6 +7,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    color-scheme: dark;
   }
 
   body {
@@ -20,6 +21,27 @@
       radial-gradient(at 100% 0%, rgba(0, 229, 255, 0.05) 0px, transparent 50%),
       radial-gradient(at 50% 100%, rgba(229, 9, 20, 0.05) 0px, transparent 50%);
     background-attachment: fixed;
+  }
+
+  @media (max-width: 640px) {
+    body {
+      background-attachment: scroll;
+    }
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    min-height: 44px;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -48,7 +70,7 @@
 
 /* Custom premium classes */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(8, 8, 10, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);

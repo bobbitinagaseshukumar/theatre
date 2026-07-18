@@ -1,24 +1,39 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../index";
 import { protect, AuthenticatedRequest } from "../middleware/auth";
-import { BookingStatus, ShowtimeSeatStatus } from "@prisma/client";
+import { BookingStatus, Role, ShowtimeSeatStatus } from "@prisma/client";
 
 const router = Router();
+
+const parseSeatNumber = (seatNumber: string) => {
+  const match = String(seatNumber).trim().toUpperCase().match(/^([A-Z])[-\s]?(\d{1,2})$/);
+  if (!match) return null;
+  return {
+    row: match[1],
+    col: Number(match[2]),
+    seatNumber: `${match[1]}-${Number(match[2])}`,
+  };
+};
 
 // Create pending booking
 router.post("/", protect, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { showtimeId, seatNumbers, foodItems, totalPrice } = req.body;
     const userId = req.user?.id;
+    const normalizedSeats = Array.isArray(seatNumbers)
+      ? seatNumbers
+          .map(parseSeatNumber)
+          .filter((seat): seat is NonNullable<ReturnType<typeof parseSeatNumber>> => Boolean(seat))
+      : [];
+    const normalizedTotal = Number(totalPrice);
 
-    if (!showtimeId || !seatNumbers || seatNumbers.length === 0 || !totalPrice || !userId) {
+    if (!showtimeId || normalizedSeats.length === 0 || !Number.isFinite(normalizedTotal) || normalizedTotal <= 0 || !userId) {
       res.status(400).json({ message: "Invalid booking details." });
       return;
     }
 
     // Wrap in transaction: check seats availability, lock them, create booking
     const booking = await prisma.$transaction(async (tx) => {
-      // 1. Check if seats are already booked/locked
       const showtime = await tx.showtime.findUnique({
         where: { id: showtimeId },
         include: { screen: true },
@@ -28,48 +43,91 @@ router.post("/", protect, async (req: AuthenticatedRequest, res: Response): Prom
         throw new Error("Showtime not found.");
       }
 
-      // Check if ScreenSeats exist, create if they don't (simplified dynamic seat setup)
-      for (const seatNum of seatNumbers) {
-        const parts = seatNum.split("-");
-        const row = parts[0];
-        const col = parseInt(parts[1]);
+      const seatsToLock = [];
+      const now = new Date();
+      const lockExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
+      for (const parsedSeat of normalizedSeats) {
         let screenSeat = await tx.screenSeat.findUnique({
-          where: { screenId_seatNumber: { screenId: showtime.screenId, seatNumber: seatNum } },
+          where: { screenId_seatNumber: { screenId: showtime.screenId, seatNumber: parsedSeat.seatNumber } },
         });
 
         if (!screenSeat) {
           screenSeat = await tx.screenSeat.create({
             data: {
               screenId: showtime.screenId,
-              seatNumber: seatNum,
-              row,
-              col,
+              seatNumber: parsedSeat.seatNumber,
+              row: parsedSeat.row,
+              col: parsedSeat.col,
             },
           });
         }
 
-        // Check if ShowtimeSeat is booked
         const showtimeSeat = await tx.showtimeSeat.findUnique({
           where: { showtimeId_screenSeatId: { showtimeId, screenSeatId: screenSeat.id } },
         });
 
         if (showtimeSeat && showtimeSeat.status === ShowtimeSeatStatus.BOOKED) {
-          throw new Error(`Seat ${seatNum} is already booked.`);
+          throw new Error(`Seat ${parsedSeat.seatNumber} is already booked.`);
         }
+        if (
+          showtimeSeat &&
+          showtimeSeat.status === ShowtimeSeatStatus.LOCKED &&
+          showtimeSeat.userId !== userId &&
+          showtimeSeat.lockedUntil &&
+          showtimeSeat.lockedUntil > now
+        ) {
+          throw new Error(`Seat ${parsedSeat.seatNumber} is temporarily locked.`);
+        }
+
+        seatsToLock.push({ parsedSeat, screenSeat, showtimeSeat });
       }
 
-      // Create Booking
       const newBooking = await tx.booking.create({
         data: {
           userId,
           showtimeId,
-          totalPrice,
-          seatNumbers,
+          totalPrice: normalizedTotal,
+          seatNumbers: normalizedSeats.map((seat) => seat.seatNumber),
           foodItems: foodItems || [],
           status: BookingStatus.PENDING,
         },
       });
+
+      for (const seat of seatsToLock) {
+        if (seat.showtimeSeat) {
+          const lockResult = await tx.showtimeSeat.updateMany({
+            where: {
+              id: seat.showtimeSeat.id,
+              OR: [
+                { status: ShowtimeSeatStatus.AVAILABLE },
+                { status: ShowtimeSeatStatus.LOCKED, lockedUntil: { lt: now } },
+                { status: ShowtimeSeatStatus.LOCKED, userId },
+              ],
+            },
+            data: {
+              status: ShowtimeSeatStatus.LOCKED,
+              userId,
+              lockedUntil: lockExpiry,
+              bookingId: newBooking.id,
+            },
+          });
+          if (lockResult.count !== 1) {
+            throw new Error(`Seat ${seat.parsedSeat.seatNumber} is no longer available.`);
+          }
+        } else {
+          await tx.showtimeSeat.create({
+            data: {
+              showtimeId,
+              screenSeatId: seat.screenSeat.id,
+              status: ShowtimeSeatStatus.LOCKED,
+              userId,
+              lockedUntil: lockExpiry,
+              bookingId: newBooking.id,
+            },
+          });
+        }
+      }
 
       return newBooking;
     });
@@ -297,6 +355,12 @@ router.get("/:id", protect, async (req: AuthenticatedRequest, res: Response): Pr
 
     if (!booking) {
       res.status(404).json({ message: "Booking not found." });
+      return;
+    }
+
+    const elevatedRoles: Role[] = [Role.OWNER, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF];
+    if (booking.userId !== req.user?.id && !elevatedRoles.includes(req.user?.role as Role)) {
+      res.status(403).json({ message: "You do not have access to this booking." });
       return;
     }
 

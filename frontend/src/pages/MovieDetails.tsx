@@ -179,8 +179,15 @@ const MovieDetails: React.FC = () => {
     const fetchMovieData = async () => {
       setLoading(true);
       try {
-        // 1. Fetch main movie fields
-        const res = await API.get(`/movies/${id}`);
+        // Run all API calls in parallel to solve slow loading times
+        const [res, castRes, galRes, songRes, revRes] = await Promise.all([
+          API.get(`/movies/${id}`),
+          API.get(`/movies/${id}/cast`).catch(() => ({ data: [] })),
+          API.get(`/movies/${id}/gallery`).catch(() => ({ data: [] })),
+          API.get(`/movies/${id}/songs`).catch(() => ({ data: [] })),
+          API.get(`/movies/${id}/reviews`).catch(() => ({ data: [] }))
+        ]);
+
         const foundMock = MOCK_MOVIES.find((m) => m.id === id) || MOCK_MOVIES[0];
         const movieObj = {
           ...res.data,
@@ -195,23 +202,10 @@ const MovieDetails: React.FC = () => {
           format: res.data.format || foundMock.format,
         };
         setMovie(movieObj);
-
-        // 2. Fetch Cast
-        const castRes = await API.get(`/movies/${id}/cast`);
         setCast(castRes.data || []);
-
-        // 3. Fetch Gallery
-        const galRes = await API.get(`/movies/${id}/gallery`);
         setGallery(galRes.data || []);
-
-        // 4. Fetch Soundtrack
-        const songRes = await API.get(`/movies/${id}/songs`);
         setSongs(songRes.data || []);
-
-        // 5. Fetch Reviews
-        const revRes = await API.get(`/movies/${id}/reviews`);
         setReviews(revRes.data || []);
-
       } catch (err) {
         // Fallbacks
         const found = MOCK_MOVIES.find((m) => m.id === id) || MOCK_MOVIES[0];

@@ -1,17 +1,18 @@
 import React, { Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
 import { I18nProvider } from "./i18n/I18nProvider";
+import ErrorBoundary from "./components/ErrorBoundary";
+import Movies from "./pages/Movies";
 
 // Lazy load pages for performance (Lighthouse optimization)
 const Home = React.lazy(() => import("./pages/Home"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const OTPVerify = React.lazy(() => import("./pages/OTPVerify"));
-const Movies = React.lazy(() => import("./pages/Movies"));
 const MovieDetails = React.lazy(() => import("./pages/MovieDetails"));
 const Booking = React.lazy(() => import("./pages/Booking"));
 const Food = React.lazy(() => import("./pages/Food"));
@@ -26,17 +27,25 @@ const Payment = React.lazy(() => import("./pages/Payment"));
 const TheatreSelection = React.lazy(() => import("./pages/TheatreSelection"));
 const AccountSettings = React.lazy(() => import("./pages/AccountSettings"));
 const Notifications = React.lazy(() => import("./pages/Notifications"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const App: React.FC = () => {
   return (
     <I18nProvider>
+    <ErrorBoundary>
     <Router>
       <ScrollToTop />
       <div className="flex flex-col min-h-screen bg-background text-white">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-cpm focus:bg-gold focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-black"
+        >
+          Skip to content
+        </a>
         <Navbar />
         
         {/* Main Content Area */}
-        <main className="flex-grow pt-20">
+        <main id="main-content" className="flex-grow pt-20" tabIndex={-1}>
           <Suspense 
             fallback={
               <div className="min-h-[70vh] flex items-center justify-center">
@@ -67,7 +76,7 @@ const App: React.FC = () => {
               <Route path="/membership" element={<Membership />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
         </main>
@@ -90,6 +99,7 @@ const App: React.FC = () => {
         />
       </div>
     </Router>
+    </ErrorBoundary>
     </I18nProvider>
   );
 };

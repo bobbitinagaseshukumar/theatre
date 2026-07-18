@@ -16,7 +16,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Security Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 // Allowed origins: local dev + the deployed frontend (set FRONTEND_URL in Render).
 // Supports a comma-separated FRONTEND_URL for multiple domains (e.g. preview + prod).
 const allowedOrigins = [
@@ -30,8 +34,14 @@ app.use(
     origin: (origin, callback) => {
       // Allow non-browser clients (no origin) and any whitelisted origin
       if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-      // Allow any *.vercel.app preview/production domain
-      if (/\.vercel\.app$/.test(new URL(origin).hostname)) return callback(null, true);
+      try {
+        const hostname = new URL(origin).hostname;
+        if (process.env.ALLOW_VERCEL_PREVIEWS === "true" && /\.vercel\.app$/.test(hostname)) {
+          return callback(null, true);
+        }
+      } catch {
+        return callback(new Error("Invalid CORS origin"));
+      }
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -39,7 +49,7 @@ app.use(
 );
 
 // Body Parser
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Request Logger
@@ -180,9 +190,10 @@ app.use("/api/usage", saasRoutes);
 // Error Handling Middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
+  const isProduction = process.env.NODE_ENV === "production";
   res.status(err.status || 500).json({
-    message: err.message || "Internal Server Error",
-    error: process.env.NODE_ENV === "development" ? err : {},
+    message: isProduction ? "Internal Server Error" : err.message || "Internal Server Error",
+    error: isProduction ? {} : err,
   });
 });
 

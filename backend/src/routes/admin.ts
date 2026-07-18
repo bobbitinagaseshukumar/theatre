@@ -1,7 +1,11 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../index";
+import { Role } from "@prisma/client";
+import { protect, restrictTo } from "../middleware/auth";
 
 const router = Router();
+
+router.use(protect, restrictTo(Role.OWNER, Role.SUPER_ADMIN, Role.MANAGER, Role.STAFF));
 
 // GET /dashboard - Full Admin Dashboard Data
 router.get("/dashboard", async (_req: Request, res: Response) => {
