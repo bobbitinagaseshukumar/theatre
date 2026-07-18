@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════
+# Cinema Pro Max — Render Blueprint
+# Provisions: Postgres database + Node/Express backend web service.
+# Import via Render → New → Blueprint → select this repo.
+# ═══════════════════════════════════════════════════════════
+databases:
+  - name: cinema-db
+    databaseName: cinema_pro_max
+    plan: free
+
+services:
+  - type: web
+    name: cinema-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    # `db push` syncs the Prisma schema to the DB on each deploy (no migration files yet)
+    startCommand: npx prisma db push --skip-generate && node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cinema-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      # Set this to your Vercel URL after the frontend deploys (for CORS)
+      - key: FRONTEND_URL
+        sync: false

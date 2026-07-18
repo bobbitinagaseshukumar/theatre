@@ -17,9 +17,23 @@ const PORT = process.env.PORT || 5000;
 
 // Security Middleware
 app.use(helmet());
+// Allowed origins: local dev + the deployed frontend (set FRONTEND_URL in Render).
+// Supports a comma-separated FRONTEND_URL for multiple domains (e.g. preview + prod).
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()) : []),
+];
+
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:3000"], // Frontend URLs
+    origin: (origin, callback) => {
+      // Allow non-browser clients (no origin) and any whitelisted origin
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      // Allow any *.vercel.app preview/production domain
+      if (/\.vercel\.app$/.test(new URL(origin).hostname)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
