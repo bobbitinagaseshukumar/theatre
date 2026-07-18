@@ -232,10 +232,10 @@ const Navbar: React.FC = () => {
           ) : (
             <Link
               to="/login"
-              className="px-3 py-2 sm:px-6 sm:py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs sm:text-sm tracking-wide shadow-redGlow hover:scale-102 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap"
+              className="px-3.5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs sm:text-sm tracking-wide shadow-redGlow hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap z-20"
             >
-              <User className="w-4 h-4" />
-              <span className="hidden min-[380px]:inline">Sign In</span>
+              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Sign In</span>
             </Link>
           )}
 

@@ -353,12 +353,14 @@ const AdminDashboard: React.FC = () => {
           );
         }
       } catch {
-        toast.error("Movie catalogue sync failed. Showing local fallback.");
+        // Silent poll error fallback
       }
     };
     loadAdminMovies();
+    const movieInterval = setInterval(loadAdminMovies, 4000);
     return () => {
       active = false;
+      clearInterval(movieInterval);
     };
   }, []);
 
@@ -388,12 +390,14 @@ const AdminDashboard: React.FC = () => {
           );
         }
       } catch {
-        toast.error("Show schedule sync failed. Showing local fallback.");
+        // Silent poll error fallback
       }
     };
     loadAdminShows();
+    const showInterval = setInterval(loadAdminShows, 4000);
     return () => {
       active = false;
+      clearInterval(showInterval);
     };
   }, []);
 
