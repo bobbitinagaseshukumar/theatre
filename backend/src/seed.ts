@@ -28,6 +28,21 @@ async function seedUsers() {
     },
   });
 
+  // Seed user owner requested by client
+  const ownerPasswordNagashu = await bcrypt.hash("seshu@2409", 12);
+  await prisma.user.upsert({
+    where: { email: "nagaseshukumarbobbiti@gmail.com" },
+    update: { password: ownerPasswordNagashu, role: Role.OWNER, isVerified: true },
+    create: {
+      email: "nagaseshukumarbobbiti@gmail.com",
+      password: ownerPasswordNagashu,
+      name: "Naga Seshu Kumar",
+      phone: "+919999999999",
+      role: Role.OWNER,
+      isVerified: true,
+    },
+  });
+
   // Optional owner admin from env (keeps real credentials out of source control).
   // Set ADMIN_EMAIL and ADMIN_PASSWORD (e.g. in Render env vars or local .env).
   if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {

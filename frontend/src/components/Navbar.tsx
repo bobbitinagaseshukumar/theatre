@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { Bell, LogOut, LayoutDashboard, User, ChevronDown, Ticket, Menu, X } from "lucide-react";
+import { LogOut, LayoutDashboard, User, ChevronDown, Ticket, Menu, X } from "lucide-react";
 import type { RootState } from "../redux/store";
 import { logout } from "../redux/authSlice";
 import SearchBar from "./SearchBar";
@@ -13,7 +13,6 @@ const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [logoRotation, setLogoRotation] = useState({ x: 0, y: 0 });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.auth);
@@ -68,7 +67,6 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     setMobileOpen(false);
     setShowProfileMenu(false);
-    setShowNotifications(false);
   }, [location.pathname, location.search]);
 
   return (
@@ -143,39 +141,7 @@ const Navbar: React.FC = () => {
           {/* Language Switcher */}
           <LanguageSwitcher />
 
-          {/* Notification Bell Badge with Pulse */}
-          <div className="relative">
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              aria-label="Open notifications"
-              aria-expanded={showNotifications}
-              className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-accent hover:text-accent transition-all cursor-pointer text-gray-300 relative"
-            >
-              <Bell className="w-5 h-5" />
-              {/* Pulsing notifications indicator dot */}
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full shadow-redGlow animate-ping" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full shadow-redGlow" />
-            </button>
 
-            {/* Notification Drawer Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 top-12 z-50 w-[min(20rem,calc(100vw-2rem))] rounded-xl glass-panel border border-white/10 bg-[#0d0d0d]/95 overflow-hidden shadow-glass py-2 font-number">
-                <div className="px-4 py-2 border-b border-white/5 font-heading text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Announcements & Alerts
-                </div>
-                <div className="divide-y divide-white/5 text-xs text-gray-300">
-                  <div className="p-4 space-y-1">
-                    <p className="font-semibold text-white">💥 Spatial Atmos Upgrade</p>
-                    <p className="text-gray-500 leading-normal"> Dolby Atmos surround sounds added to Screen 1. Book now!</p>
-                  </div>
-                  <div className="p-4 space-y-1">
-                    <p className="font-semibold text-white">🎟️ Cancellation Protection</p>
-                    <p className="text-gray-500 leading-normal">Refund rules updated. Fully cancel up to 2 hrs prior.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* User Profile dropdown */}
           {user ? (
@@ -253,11 +219,8 @@ const Navbar: React.FC = () => {
 
       </div>
       {mobileOpen && (
-        <div className="lg:hidden border-t border-white/10 bg-[#050505]/98 px-4 pb-5 pt-3 shadow-glass backdrop-blur-2xl">
-          <div className="mb-3 md:hidden">
-            <SearchBar />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="fixed inset-x-0 top-[76px] sm:top-[90px] bottom-0 bg-[#0a0a0d] border-t border-white/10 z-[99] px-6 py-8 overflow-y-auto space-y-6 flex flex-col justify-start">
+          <div className="grid grid-cols-2 gap-3">
             {menuItems.map((item) => {
               const active = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
               return (
@@ -265,10 +228,10 @@ const Navbar: React.FC = () => {
                   key={item.name}
                   to={item.path}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-xl border px-3 py-3 text-sm font-bold ${
+                  className={`rounded-xl border px-4 py-4 text-center font-heading text-sm font-extrabold uppercase transition-all tracking-wider ${
                     active
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-white/10 bg-white/5 text-gray-300"
+                      ? "border-primary/50 bg-primary/10 text-primary shadow-redGlow"
+                      : "border-white/10 bg-white/5 text-gray-300 hover:text-white"
                   }`}
                 >
                   {item.name}
@@ -278,52 +241,52 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* User Profile / Auth buttons for mobile */}
-          <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="pt-6 border-t border-white/10">
             {user ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 px-3 py-2 bg-white/5 rounded-xl border border-white/5">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-slate-700 to-slate-900 flex items-center justify-center font-heading font-extrabold text-accent text-xs">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-slate-700 to-slate-900 flex items-center justify-center font-heading font-extrabold text-accent text-sm">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-bold text-white text-xs truncate max-w-[160px]">{user.name}</div>
-                    <div className="text-[10px] text-gray-500 truncate max-w-[160px]">{user.email}</div>
+                    <div className="font-bold text-white text-sm truncate max-w-[200px]">{user.name}</div>
+                    <div className="text-xs text-gray-500 truncate max-w-[200px]">{user.email}</div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {isAdmin && (
                     <Link
                       to="/admin"
-                      className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white"
+                      className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-gray-300 hover:text-white"
                     >
-                      <LayoutDashboard className="w-3.5 h-3.5 text-secondary" /> CMS
+                      <LayoutDashboard className="w-4 h-4 text-secondary" /> CMS
                     </Link>
                   )}
                   <Link
                     to="/profile"
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs font-bold text-gray-300 hover:text-white"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-gray-300 hover:text-white"
                   >
-                    <Ticket className="w-3.5 h-3.5 text-accent" /> Tickets
+                    <Ticket className="w-4 h-4 text-accent" /> Tickets
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-xs font-bold text-primary hover:bg-primary/20 cursor-pointer"
+                    className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs font-bold text-primary hover:bg-primary/20 cursor-pointer"
                   >
-                    <LogOut className="w-3.5 h-3.5" /> Logout
+                    <LogOut className="w-4 h-4" /> Logout
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <Link
                   to="/login"
-                  className="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs uppercase tracking-wider shadow-redGlow flex items-center justify-center gap-1.5"
+                  className="w-full py-4 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs uppercase tracking-widest shadow-redGlow flex items-center justify-center gap-2"
                 >
                   <User className="w-4 h-4" /> Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="w-full py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center"
+                  className="w-full py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-widest flex items-center justify-center"
                 >
                   Create Account
                 </Link>
