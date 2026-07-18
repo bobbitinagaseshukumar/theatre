@@ -83,7 +83,7 @@ const Navbar: React.FC = () => {
       <div className="max-w-[1600px] mx-auto h-full px-3 sm:px-6 lg:px-10 flex items-center justify-between">
         
         {/* LEFT: 3D animated Logo */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 mr-6 md:mr-10 lg:mr-16">
           <Link 
             to="/" 
             className="flex items-center gap-3 perspective-500"
@@ -108,7 +108,7 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* CENTER: Luxury Hover Menus */}
-        <div className="hidden lg:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-4 xl:gap-8">
           {menuItems.map((item) => {
             const active = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
             return (
