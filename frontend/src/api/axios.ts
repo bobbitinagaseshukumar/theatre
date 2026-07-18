@@ -1,7 +1,10 @@
 import axios from "axios";
 
+// Configurable API base URL:
+//   - Set VITE_API_URL in Vercel (e.g. https://api.yourdomain.com/api) for production
+//   - Falls back to the local backend during development
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
   timeout: 10000,
 });
 
