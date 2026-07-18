@@ -1,0 +1,25 @@
+{
+  "name": "cinema-pro-max",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web & npm run dev --workspace=apps/backend",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "type-check": "tsc --noEmit --project apps/web/tsconfig.json && tsc --noEmit --project apps/backend/tsconfig.json",
+    "db:generate": "npm run prisma:generate --workspace=packages/database",
+    "db:migrate": "npm run prisma:migrate --workspace=packages/database",
+    "db:studio": "npm run prisma:studio --workspace=packages/database",
+    "clean": "rimraf apps/*/node_modules packages/*/node_modules node_modules"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

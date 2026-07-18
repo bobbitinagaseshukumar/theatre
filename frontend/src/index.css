@@ -1,0 +1,225 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;600;700;800&family=Poppins:wght@400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-white font-body selection:bg-primary selection:text-white overflow-x-hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background-color: #050505;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(0, 229, 255, 0.05) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(229, 9, 20, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight;
+  }
+
+  /* Custom dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #222;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #E50914;
+  }
+}
+
+/* Custom premium classes */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-panel-hover:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 229, 255, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(0, 229, 255, 0.1);
+  transform: translateY(-4px);
+}
+
+.glow-text-red {
+  text-shadow: 0 0 10px rgba(229, 9, 20, 0.6);
+}
+
+.glow-text-blue {
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+}
+
+.glow-text-purple {
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400;
+}
+
+.gradient-text-primary {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+}
+
+.gradient-text-accent {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-accent to-secondary;
+}
+
+/* Floating animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Cinema Screen Curved effect */
+.cinema-screen {
+  position: relative;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(0, 229, 255, 0.3), transparent);
+  border-top: 3px solid #00E5FF;
+  border-radius: 50% / 15px 15px 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 229, 255, 0.3);
+  filter: blur(1px);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CINEMA PRO MAX — Volume 7 Global Design System utilities
+   Additive layer. Does not alter existing CineVerse styles.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Premium glass card surface (gold-accent variant of glass-panel) */
+.cpm-glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+.cpm-gold-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(90deg, #FFD700, #F4C542);
+}
+
+.glow-text-gold {
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.55);
+}
+
+/* Ripple effect on click (used by Button) */
+.cpm-ripple {
+  position: absolute;
+  border-radius: 9999px;
+  transform: scale(0);
+  animation: cpm-ripple 0.6s linear;
+  background: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+@keyframes cpm-ripple {
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+/* Loading skeleton shimmer */
+.cpm-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.cpm-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: cpm-shimmer 1.6s infinite;
+}
+
+@keyframes cpm-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* 3D tilt helper for posters/cards */
+.cpm-perspective {
+  perspective: 800px;
+}
+
+/* ─── Accessibility ─── */
+
+/* Visible focus states for keyboard navigation */
+.cpm-focusable:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #FFD700;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Respect the user's motion-reduction preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High-contrast mode support */
+@media (prefers-contrast: more) {
+  .cpm-glass,
+  .glass-panel {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(10, 10, 12, 0.9);
+  }
+}

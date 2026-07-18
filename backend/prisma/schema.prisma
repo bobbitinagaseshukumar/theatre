@@ -1,0 +1,2588 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  STAFF
+  MANAGER
+  OWNER
+  SUPER_ADMIN
+}
+
+enum MovieStatus {
+  NOW_SHOWING
+  UPCOMING
+  ARCHIVED
+}
+
+enum SeatType {
+  STANDARD
+  PREMIUM
+  VIP
+}
+
+enum ShowtimeSeatStatus {
+  AVAILABLE
+  LOCKED
+  BOOKED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  STRIPE
+}
+
+enum FoodCategory {
+  BEVERAGES
+  POPCORN
+  SNACKS
+  COMBOS
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  password     String
+  name         String
+  phone        String?
+  role         Role          @default(CUSTOMER)
+  isVerified   Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  bookings          Booking[]
+  reviews           Review[]
+  activityLogs      ActivityLog[]
+  customerProfile   CustomerProfile?
+  customerTags      CustomerTag[]
+  supportTickets    SupportTicket[]
+  customerTimelines CustomerTimeline[]
+}
+
+model OTP {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Movie {
+  id             String      @id @default(uuid())
+  title          String
+  description    String
+  trailerUrl     String?
+  posterUrl      String
+  bannerUrl      String?
+  duration       Int         // in minutes
+  releaseDate    DateTime
+  language       String[]    // e.g. ["English", "Hindi"]
+  genre          String[]    // e.g. ["Action", "Sci-Fi"]
+  rating         Float       @default(0.0)
+  ageRestriction String      @default("U/A")
+  cast           Json        // JSON array of actors: [{name, role, imageUrl}]
+  status         MovieStatus @default(UPCOMING)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  showtimes      Showtime[]
+  reviews        Review[]
+}
+
+model Screen {
+  id            String       @id @default(uuid())
+  name          String       @unique // e.g. "Screen 1", "IMAX"
+  totalRows     Int          @default(10)
+  totalCols     Int          @default(15)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  screenSeats   ScreenSeat[]
+  showtimes     Showtime[]
+}
+
+model ScreenSeat {
+  id            String         @id @default(uuid())
+  screenId      String
+  screen        Screen         @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  seatNumber    String         // e.g. "A-1", "J-12"
+  row           String         // e.g. "A", "J"
+  col           Int            // e.g. 1, 12
+  type          SeatType       @default(STANDARD)
+  showtimeSeats ShowtimeSeat[]
+
+  @@unique([screenId, seatNumber])
+}
+
+model Showtime {
+  id            String         @id @default(uuid())
+  movieId       String
+  movie         Movie          @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  screenId      String
+  screen        Screen         @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  startTime     DateTime
+  endTime       DateTime
+  basePrice     Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  showtimeSeats ShowtimeSeat[]
+  bookings      Booking[]
+}
+
+model ShowtimeSeat {
+  id           String             @id @default(uuid())
+  showtimeId   String
+  showtime     Showtime           @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+  screenSeatId String
+  screenSeat   ScreenSeat         @relation(fields: [screenSeatId], references: [id], onDelete: Cascade)
+  status       ShowtimeSeatStatus @default(AVAILABLE)
+  userId       String?            // User who locked or booked this seat
+  lockedUntil  DateTime?          // For seat locking countdown (e.g. 5 minutes)
+  bookingId    String?
+  booking      Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@unique([showtimeId, screenSeatId])
+}
+
+model Booking {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  showtimeId    String
+  showtime      Showtime       @relation(fields: [showtimeId], references: [id], onDelete: Cascade)
+  bookingDate   DateTime       @default(now())
+  totalPrice    Float
+  status        BookingStatus  @default(PENDING)
+  foodItems     Json?          // Array of {foodItemId, quantity, price}
+  seatNumbers   String[]       // e.g. ["A-1", "A-2"]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  payments      Payment[]
+  showtimeSeats ShowtimeSeat[]
+}
+
+model Payment {
+  id            String          @id @default(uuid())
+  bookingId     String
+  booking       Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  amount        Float
+  status        PaymentStatus   @default(PENDING)
+  transactionId String?         @unique // Razorpay Order ID or Payment ID
+  signature     String?         // Razorpay signature verify
+  provider      PaymentProvider @default(RAZORPAY)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model FoodItem {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  description String?
+  price       Float
+  imageUrl    String
+  category    FoodCategory @default(SNACKS)
+  isAvailable Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  discountValue  Float     // could be percentage or fixed amount
+  isPercentage   Boolean   @default(true)
+  maxDiscount    Float?    // Cap for percentage discount
+  minOrderAmount Float     @default(0.0)
+  expiresAt      DateTime
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+}
+
+model Offer {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  imageUrl    String
+  code        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Banner {
+  id          String   @id @default(uuid())
+  imageUrl    String
+  title       String
+  subtitle    String?
+  movieId     String?  // Optional link to details page
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movieId   String
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  rating    Int      // 1 to 5 stars
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, movieId])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g. "USER_LOGIN", "MOVIE_CREATE"
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique // e.g. "theme_colors", "cancellation_rules", "general_info"
+  value     Json     // Dynamic JSON representation
+  updatedAt DateTime @updatedAt
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketCategory {
+  BOOKING
+  PAYMENT
+  REFUND
+  FOOD
+  MEMBERSHIP
+  TECHNICAL
+  COMPLAINT
+  SUGGESTION
+  LOST_ITEM
+  PARKING
+  OTHER
+}
+
+enum KitchenOrderStatus {
+  RECEIVED
+  ACCEPTED
+  PREPARING
+  PACKED
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+model CustomerProfile {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatar            String?
+  dateOfBirth       DateTime?
+  gender            String?
+  city              String?
+  state             String?
+  country           String?   @default("India")
+  preferredGenre    String[]
+  preferredLanguage String?   @default("English")
+  lifetimeSpend     Float     @default(0)
+  totalBookings     Int       @default(0)
+  averageRating     Float     @default(0)
+  satisfactionScore Float     @default(0)
+  loyaltyTier       String    @default("Bronze")
+  lastLoginAt       DateTime?
+  lastBookingAt     DateTime?
+  marketingConsent  Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model CustomerTag {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag       String
+  color     String   @default("#F59E0B")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tag])
+}
+
+model SupportTicket {
+  id             String         @id @default(uuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       TicketCategory @default(OTHER)
+  priority       TicketPriority @default(MEDIUM)
+  status         TicketStatus   @default(OPEN)
+  subject        String
+  description    String
+  assignedAgent  String?
+  resolution     String?
+  customerRating Int?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  replies        SupportReply[]
+}
+
+model SupportReply {
+  id           String        @id @default(uuid())
+  ticketId     String
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message      String
+  isStaffReply Boolean       @default(false)
+  senderName   String
+  createdAt    DateTime      @default(now())
+}
+
+model CustomerTimeline {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     String
+  details   String?
+  ipAddress String?
+  device    String?
+  createdAt DateTime @default(now())
+}
+
+model FoodCategoryCustom {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  themeColor  String   @default("#F59E0B")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FoodCombo {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  items         Json
+  originalPrice Float
+  comboPrice    Float
+  savings       Float
+  imageUrl      String?
+  badge         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model KitchenOrder {
+  id               String             @id @default(uuid())
+  bookingId        String?
+  customerName     String
+  screenName       String?
+  seatNumber       String?
+  items            Json
+  totalAmount      Float
+  status           KitchenOrderStatus @default(RECEIVED)
+  assignedChef     String?
+  notes            String?
+  estimatedPrepTime Int               @default(5)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model FoodInventoryItem {
+  id             String    @id @default(uuid())
+  ingredientName String    @unique
+  supplier       String?
+  currentStock   Float     @default(0)
+  minimumStock   Float     @default(10)
+  maximumStock   Float     @default(1000)
+  unit           String    @default("units")
+  costPerUnit    Float     @default(0)
+  expiryDate     DateTime?
+  lastRestocked  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 6 — Employee Management System
+// ═══════════════════════════════════════════════════
+
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  INTERN
+  TEMPORARY
+  PART_TIME
+  FREELANCER
+  PROBATION
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  ON_LEAVE
+  HALF_DAY
+  HOLIDAY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  EARNED
+  MATERNITY
+  PATERNITY
+  EMERGENCY
+  COMP_OFF
+  LOSS_OF_PAY
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  REJECTED
+}
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+  WEEKEND
+  FESTIVAL
+  CUSTOM
+}
+
+model Department {
+  id            String     @id @default(uuid())
+  name          String     @unique
+  description   String?
+  headName      String?
+  employeeCount Int        @default(0)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  employees     Employee[]
+}
+
+model Employee {
+  id               String         @id @default(uuid())
+  employeeCode     String         @unique
+  firstName        String
+  lastName         String
+  email            String         @unique
+  phone            String?
+  avatar           String?
+  gender           String?
+  dateOfBirth      DateTime?
+  bloodGroup       String?
+  departmentId     String
+  department       Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  designation      String
+  employmentType   EmploymentType @default(PERMANENT)
+  reportingManager String?
+  joiningDate      DateTime       @default(now())
+  baseSalary       Float          @default(0)
+  currentShift     ShiftType      @default(MORNING)
+  performanceScore Float          @default(0)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  attendances      AttendanceRecord[]
+  leaves           LeaveRequest[]
+  tasks            EmployeeTask[]
+  payslips         Payslip[]
+}
+
+model AttendanceRecord {
+  id            String           @id @default(uuid())
+  employeeId    String
+  employee      Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date          DateTime
+  checkIn       DateTime?
+  checkOut      DateTime?
+  status        AttendanceStatus @default(PRESENT)
+  hoursWorked   Float            @default(0)
+  overtimeHours Float            @default(0)
+  method        String           @default("MANUAL")
+  notes         String?
+  createdAt     DateTime         @default(now())
+
+  @@unique([employeeId, date])
+}
+
+model ShiftSchedule {
+  id           String    @id @default(uuid())
+  name         String
+  shiftType    ShiftType @default(MORNING)
+  startTime    String
+  endTime      String
+  graceMinutes Int       @default(15)
+  breakMinutes Int       @default(30)
+  maxHours     Float     @default(8)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model LeaveRequest {
+  id         String      @id @default(uuid())
+  employeeId String
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType  LeaveType   @default(CASUAL)
+  startDate  DateTime
+  endDate    DateTime
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  approvedBy String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Payslip {
+  id               String    @id @default(uuid())
+  employeeId       String
+  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month            String
+  basicPay         Float
+  hra              Float     @default(0)
+  da               Float     @default(0)
+  specialAllowance Float     @default(0)
+  overtime         Float     @default(0)
+  bonus            Float     @default(0)
+  grossPay         Float
+  pfDeduction      Float     @default(0)
+  esiDeduction     Float     @default(0)
+  tdsDeduction     Float     @default(0)
+  otherDeductions  Float     @default(0)
+  netPay           Float
+  isPaid           Boolean   @default(false)
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model PerformanceReview {
+  id               String   @id @default(uuid())
+  employeeId       String
+  employeeName     String
+  department       String
+  period           String
+  attendanceScore  Float    @default(0)
+  punctualityScore Float    @default(0)
+  customerRating   Float    @default(0)
+  managerRating    Float    @default(0)
+  overallScore     Float    @default(0)
+  recommendation   String?
+  createdAt        DateTime @default(now())
+}
+
+model EmployeeTask {
+  id          String     @id @default(uuid())
+  employeeId  String
+  employee    Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  category    String     @default("General")
+  status      TaskStatus @default(PENDING)
+  priority    String     @default("MEDIUM")
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Announcement {
+  id               String    @id @default(uuid())
+  title            String
+  message          String
+  category         String    @default("General")
+  priority         String    @default("NORMAL")
+  targetDepartment String?
+  isActive         Boolean   @default(true)
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 7 — Marketing Automation System
+// ═══════════════════════════════════════════════════
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum CampaignChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  PUSH
+  IN_APP
+  SOCIAL
+  BANNER
+}
+
+enum RedemptionType {
+  TICKET
+  FOOD
+  PARKING
+  MEMBERSHIP
+  CASHBACK
+  GIFT_CARD
+  MERCHANDISE
+}
+
+model MembershipPlan {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  tier            String   @default("Basic")
+  description     String?
+  monthlyPrice    Float    @default(0)
+  quarterlyPrice  Float    @default(0)
+  yearlyPrice     Float    @default(0)
+  lifetimePrice   Float?
+  discountPercent Float    @default(0)
+  foodDiscount    Float    @default(0)
+  bonusPoints     Int      @default(0)
+  priorityBooking Boolean  @default(false)
+  freeParking     Boolean  @default(false)
+  loungeAccess    Boolean  @default(false)
+  maxTickets      Int      @default(0)
+  benefits        Json?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  memberships     CustomerMembership[]
+}
+
+model CustomerMembership {
+  id             String         @id @default(uuid())
+  userId         String
+  planId         String
+  plan           MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  membershipCode String         @unique
+  startDate      DateTime       @default(now())
+  endDate        DateTime
+  autoRenew      Boolean        @default(true)
+  isActive       Boolean        @default(true)
+  rewardPoints   Int            @default(0)
+  walletBalance  Float          @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model RewardPoint {
+  id          String   @id @default(uuid())
+  userId      String
+  points      Int
+  source      String   @default("PURCHASE")
+  description String?
+  expiresAt   DateTime?
+  isRedeemed  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model CouponCampaign {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  title           String
+  description     String?
+  discountType    String    @default("PERCENTAGE")
+  discountValue   Float
+  maxDiscount     Float?
+  minOrderAmount  Float     @default(0)
+  usageLimit      Int       @default(100)
+  usedCount       Int       @default(0)
+  perCustomerLimit Int      @default(1)
+  applicableMovies String[]
+  applicableShows  String[]
+  applicableFood   String[]
+  isStackable     Boolean   @default(false)
+  isHidden        Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  startsAt        DateTime  @default(now())
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  usages          CouponUsage[]
+}
+
+model CouponUsage {
+  id        String         @id @default(uuid())
+  couponId  String
+  coupon    CouponCampaign @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String
+  orderId   String?
+  discount  Float
+  usedAt    DateTime       @default(now())
+}
+
+model Referral {
+  id             String   @id @default(uuid())
+  referrerUserId String
+  referredUserId String?
+  referralCode   String   @unique
+  referralLink   String?
+  rewardType     String   @default("POINTS")
+  referrerReward Float    @default(0)
+  referredReward Float    @default(0)
+  isConverted    Boolean  @default(false)
+  convertedAt    DateTime?
+  createdAt      DateTime @default(now())
+}
+
+model MarketingCampaign {
+  id              String         @id @default(uuid())
+  name            String
+  description     String?
+  channel         CampaignChannel @default(EMAIL)
+  status          CampaignStatus  @default(DRAFT)
+  targetSegment   String?
+  subject         String?
+  content         String?
+  sendAt          DateTime?
+  sentCount       Int            @default(0)
+  openCount       Int            @default(0)
+  clickCount      Int            @default(0)
+  conversionCount Int            @default(0)
+  revenue         Float          @default(0)
+  budget          Float          @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model ScratchCard {
+  id            String   @id @default(uuid())
+  campaignName  String
+  rewardType    String   @default("POINTS")
+  rewardValue   Float    @default(0)
+  probability   Float    @default(0.5)
+  totalCards     Int      @default(1000)
+  scratchedCount Int     @default(0)
+  isActive      Boolean  @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+}
+
+model LuckyDraw {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  prizeType     String
+  prizeValue    String
+  entryRule      String?
+  totalEntries  Int       @default(0)
+  winnerId      String?
+  winnerName    String?
+  isDrawn       Boolean   @default(false)
+  drawDate      DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+}
+
+model CustomerSegment {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  criteria    Json?
+  customerCount Int    @default(0)
+  isAutomatic Boolean  @default(false)
+  color       String   @default("#6366F1")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MarketingAutomation {
+  id          String   @id @default(uuid())
+  name        String
+  trigger     String
+  actions     Json
+  isActive    Boolean  @default(true)
+  executions  Int      @default(0)
+  lastRunAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 8 — Enterprise Finance Management
+// ═══════════════════════════════════════════════════
+
+model BankAccount {
+  id             String            @id @default(uuid())
+  name           String
+  type           String            @default("Bank") // Current, Savings, Cash, UPI, Wallet
+  openingBalance Float             @default(0)
+  currentBalance Float             @default(0)
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  transactions   BankTransaction[]
+}
+
+model BankTransaction {
+  id              String      @id @default(uuid())
+  accountId       String
+  account         BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  type            String      // INFLOW, OUTFLOW
+  amount          Float
+  description     String?
+  reference       String?
+  transactionDate DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+}
+
+model RevenueRecord {
+  id               String   @id @default(uuid())
+  source           String   // Movie Tickets, Food Orders, Membership, Parking, etc.
+  amount           Float
+  taxPaid          Float    @default(0)
+  ledgerCode       String?
+  department       String?
+  branch           String?
+  date             DateTime @default(now())
+  createdAt        DateTime @default(now())
+}
+
+model ExpenseRecord {
+  id            String    @id @default(uuid())
+  invoiceNumber String?
+  vendor        String
+  category      String
+  subcategory   String?
+  amount        Float
+  gst           Float     @default(0)
+  status        String    @default("PENDING") // DRAFT, PENDING, APPROVED, REJECTED, PAID
+  branch        String?
+  department    String?
+  approvedBy    String?
+  paymentDate   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model FinancialInvoice {
+  id           String   @id @default(uuid())
+  invoiceType  String   @default("GST") // GST, Tax, Food, Corporate, Membership, Parking
+  customerName String
+  customerEmail String?
+  amount       Float
+  cgst         Float    @default(0)
+  sgst         Float    @default(0)
+  igst         Float    @default(0)
+  totalAmount  Float
+  invoiceDate  DateTime @default(now())
+  fileUrl      String?
+  createdAt    DateTime @default(now())
+}
+
+model TaxRecord {
+  id        String   @id @default(uuid())
+  taxType   String   // CGST, SGST, IGST, CESS
+  rate      Float
+  amount    Float
+  category  String
+  date      DateTime @default(now())
+}
+
+model GSTReturn {
+  id             String    @id @default(uuid())
+  period         String    // July 2026, Q3 2026, etc.
+  cgstCollected  Float     @default(0)
+  sgstCollected  Float     @default(0)
+  igstCollected  Float     @default(0)
+  cgstPaid       Float     @default(0)
+  sgstPaid       Float     @default(0)
+  igstPaid       Float     @default(0)
+  status         String    @default("PENDING") // PENDING, FILED
+  filedAt        DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+model ProfitLoss {
+  id          String   @id @default(uuid())
+  period      String
+  revenue     Float    @default(0)
+  cogs        Float    @default(0)
+  grossProfit Float    @default(0)
+  expenses    Float    @default(0)
+  netProfit   Float    @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model BalanceSheet {
+  id          String   @id @default(uuid())
+  period      String
+  assets      Json
+  liabilities Json
+  equity      Json
+  date        DateTime @default(now())
+}
+
+model CashFlow {
+  id          String   @id @default(uuid())
+  period      String
+  inflow      Float    @default(0)
+  outflow     Float    @default(0)
+  netCashFlow Float    @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model FinancialBudget {
+  id          String   @id @default(uuid())
+  name        String
+  category    String
+  amount      Float
+  actualSpent Float    @default(0)
+  variance    Float    @default(0)
+  period      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FinancialForecast {
+  id               String   @id @default(uuid())
+  period           String
+  predictedRevenue Float
+  predictedExpense Float
+  confidence       Float    @default(0.9)
+  createdAt        DateTime @default(now())
+}
+
+model FinanceAuditLog {
+  id        String   @id @default(uuid())
+  userEmail String
+  action    String
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 9 — Enterprise Security Management
+// ═══════════════════════════════════════════════════
+
+model SecurityRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  permissions String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SecurityDevice {
+  id            String   @id @default(uuid())
+  name          String
+  type          String   // POS, Scanner, Desktop, CCTV, Tablet
+  location      String
+  status        String   @default("ONLINE") // ONLINE, OFFLINE, MAINTENANCE
+  ipAddress     String?
+  macAddress    String?
+  securityLevel String   @default("STANDARD")
+  lastActive    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model SecurityCamera {
+  id               String   @id @default(uuid())
+  name             String
+  location         String
+  status           String   @default("ONLINE") // ONLINE, OFFLINE
+  recordingStatus  String   @default("RECORDING") // RECORDING, IDLE
+  isMotionEnabled  Boolean  @default(true)
+  storageStatus    String   @default("NORMAL") // NORMAL, FULL
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model SecurityAlert {
+  id        String   @id @default(uuid())
+  title     String
+  type      String   // SERVER_ATTACK, FIRE, CAMERA_OFFLINE, FRAUD_ATTEMPT, UNAUTHORIZED_ACCESS
+  priority  String   @default("MEDIUM") // CRITICAL, HIGH, MEDIUM, LOW
+  status    String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED
+  message   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SecurityAuditLog {
+  id        String   @id @default(uuid())
+  userEmail String
+  action    String
+  details   String
+  ipAddress String?
+  device    String?
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+}
+
+model SecurityEntryLog {
+  id           String   @id @default(uuid())
+  customerName String
+  ticketId     String
+  entryTime    DateTime @default(now())
+  exitTime     DateTime?
+  gate         String
+  status       String   @default("ALLOWED") // ALLOWED, REJECTED, DUPLICATE, FRAUD
+  deviceName   String?
+  createdAt    DateTime @default(now())
+}
+
+model SecurityFraudDetection {
+  id         String   @id @default(uuid())
+  type       String   // FAILED_PAYMENT, SUSPICIOUS_REFUND, COUPON_ABUSE, REFERRAL_FRAUD
+  score      Float
+  status     String   @default("REVIEW") // ALLOW, REVIEW, BLOCK
+  details    String?
+  detectedAt DateTime @default(now())
+}
+
+model SecurityEmergency {
+  id          String   @id @default(uuid())
+  type        String   // FIRE, POWER_FAILURE, MEDICAL, SECURITY_THREAT
+  status      String   @default("ACTIVE") // ACTIVE, RESOLVED
+  description String?
+  reportedAt  DateTime @default(now())
+}
+
+model SecurityIncident {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  reportedBy  String
+  status      String   @default("OPEN") // OPEN, INVESTIGATING, CLOSED
+  createdAt   DateTime @default(now())
+}
+
+model SecurityStaffAssignment {
+  id         String   @id @default(uuid())
+  name       String
+  role       String   // GATE_KEEPER, PATROL, COMMAND_CENTER
+  shift      String
+  location   String
+  safetyScore Float   @default(5.0)
+  createdAt  DateTime @default(now())
+}
+
+model SecurityAccessSession {
+  id         String   @id @default(uuid())
+  userEmail  String
+  loginTime  DateTime @default(now())
+  ipAddress  String?
+  deviceName String?
+  isActive   Boolean  @default(true)
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 10 — Enterprise Notification System
+// ═══════════════════════════════════════════════════
+
+model MessageLog {
+  id           String   @id @default(uuid())
+  customerId   String?
+  customerName String?
+  channel      String   // EMAIL, SMS, WHATSAPP, PUSH
+  templateId   String?
+  content      String
+  status       String   @default("SENT") // SENT, DELIVERED, OPENED, CLICKED, FAILED
+  failureReason String?
+  sentAt       DateTime @default(now())
+}
+
+model MessageTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String   // BOOKING_CONFIRMATION, REFUND_COMPLETED, MOVIE_REMINDER, SYSTEM_ALERT
+  subject     String?
+  body        String
+  variables   String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CommunicationChannel {
+  id        String   @id @default(uuid())
+  name      String   @unique // EMAIL, SMS, WHATSAPP, PUSH, TELEGRAM, VOICE
+  isEnabled Boolean  @default(true)
+  priority  Int      @default(1)
+  settings  Json?
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationQueue {
+  id        String   @id @default(uuid())
+  channel   String
+  recipient String
+  subject   String?
+  body      String
+  status    String   @default("QUEUED") // QUEUED, PROCESSING, SENT, FAILED
+  retries   Int      @default(0)
+  runAt     DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model ChatConversation {
+  id           String   @id @default(uuid())
+  customerName String
+  customerEmail String?
+  status       String   @default("OPEN") // OPEN, ASSIGNED, RESOLVED
+  assignedTo   String?
+  rating       Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  messages     ChatMessage[]
+}
+
+model ChatMessage {
+  id             String           @id @default(uuid())
+  conversationId String
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderName     String
+  message        String
+  isStaff        Boolean          @default(false)
+  sentAt         DateTime         @default(now())
+}
+
+model DeliveryReport {
+  id             String   @id @default(uuid())
+  campaignName   String
+  channel        String
+  sentCount      Int      @default(0)
+  deliveredCount Int      @default(0)
+  openedCount    Int      @default(0)
+  clickedCount   Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+model CustomerPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  allowEmail      Boolean  @default(true)
+  allowSMS        Boolean  @default(true)
+  allowWhatsApp   Boolean  @default(true)
+  allowPush       Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 11 — Business Analytics & BI Reports
+// ═══════════════════════════════════════════════════
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  eventType String   // BOOKING, FOOD_SALE, PAGE_VISIT, REGISTRATION
+  value     Float?
+  details   Json?
+  timestamp DateTime @default(now())
+}
+
+model ReportDashboard {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  layout      Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CustomReport {
+  id          String   @id @default(uuid())
+  name        String
+  queryConfig Json
+  creatorName String
+  createdAt   DateTime @default(now())
+}
+
+model ReportTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String   // REVENUE, MOVIE, CUSTOMER, FOOD, FINANCE
+  components  Json
+  createdAt   DateTime @default(now())
+}
+
+model AnalyticsMetric {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  value     Float
+  period    String   // DAILY, WEEKLY, MONTHLY
+  updatedAt DateTime @updatedAt
+}
+
+model AnalyticsKPI {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  currentVal Float
+  targetVal  Float
+  status     String   @default("ON_TRACK")
+}
+
+model AnalyticsForecast {
+  id               String   @id @default(uuid())
+  targetMetric     String
+  predictedValue   Float
+  confidenceRating Float    @default(0.95)
+  dateRange        String
+  createdAt        DateTime @default(now())
+}
+
+model AnalyticsPrediction {
+  id          String   @id @default(uuid())
+  title       String
+  probability Float
+  reasoning   String?
+  actionItem  String?
+  createdAt   DateTime @default(now())
+}
+
+model CustomerAnalytics {
+  id             String   @id @default(uuid())
+  churnRate      Float
+  retentionRate  Float
+  avgLifetimeVal Float
+  frequentGenre  String?
+  createdAt      DateTime @default(now())
+}
+
+model MovieAnalytics {
+  id              String   @id @default(uuid())
+  movieName       String
+  ticketsSold     Int
+  revenue         Float
+  occupancyRating Float
+  createdAt       DateTime @default(now())
+}
+
+model RevenueAnalytics {
+  id             String   @id @default(uuid())
+  ticketRevenue  Float
+  concessionsRev Float
+  membershipRev  Float
+  otherRevenue   Float
+  date           DateTime @default(now())
+}
+
+model BusinessInsight {
+  id          String   @id @default(uuid())
+  category    String   // RECOMMENDATION, ANOMALY, RISK
+  title       String
+  description String
+  scoreImpact Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 12 — Mobile Application Ecosystem
+// ═══════════════════════════════════════════════════
+
+model MobileUser {
+  id           String   @id @default(uuid())
+  phoneNumber  String   @unique
+  pinHash      String
+  role         String   // CUSTOMER, EMPLOYEE, MANAGER, OWNER
+  name         String?
+  email        String?
+  createdAt    DateTime @default(now())
+}
+
+model MobileDevice {
+  id         String   @id @default(uuid())
+  deviceId   String   @unique
+  os         String   // iOS, Android
+  modelName  String?
+  appVersion String?
+  registered DateTime @default(now())
+}
+
+model MobileSession {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  deviceId   String
+  phoneNumber String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model PushToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  os        String
+  userId    String?
+  updatedAt DateTime @updatedAt
+}
+
+model MobileBooking {
+  id           String   @id @default(uuid())
+  movieName    String
+  showTime     String
+  seatNumbers  String[]
+  amount       Float
+  status       String   @default("CONFIRMED")
+  qrCodeString String
+  createdAt    DateTime @default(now())
+}
+
+model MobileNotification {
+  id        String   @id @default(uuid())
+  title     String
+  body      String
+  topic     String?
+  sentAt    DateTime @default(now())
+}
+
+model OfflineData {
+  id        String   @id @default(uuid())
+  deviceId  String
+  payload   Json
+  synced    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AppSettings {
+  id                  String   @id @default(uuid())
+  splashAnimationUrl  String?
+  enableFaceID        Boolean  @default(true)
+  offlineSyncInterval Int      @default(300) // seconds
+  updatedAt           DateTime @updatedAt
+}
+
+model UserPreference {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  preferredLang String   @default("English")
+  receivePromo  Boolean  @default(true)
+  updatedAt     DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 13 — Cinematic Website Customizer
+// ═══════════════════════════════════════════════════
+
+model WebsiteTheme {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  primaryColor    String   @default("#EF4444")
+  secondaryColor  String   @default("#000000")
+  accentColor     String   @default("#F59E0B")
+  fontFamily      String   @default("Outfit")
+  glowEffects     Boolean  @default(true)
+  particlesCount  Int      @default(80)
+  updatedAt       DateTime @updatedAt
+}
+
+model WebsiteBanner {
+  id         String   @id @default(uuid())
+  title      String
+  subtitle   String?
+  movieLink  String?
+  bgImageUrl String
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model MovieDisplay {
+  id          String   @id @default(uuid())
+  movieId     String   @unique
+  badgeText   String?
+  ribbonColor String   @default("#EF4444")
+  isFeatured  Boolean  @default(false)
+  sortOrder   Int      @default(0)
+}
+
+model OfferDisplay {
+  id            String   @id @default(uuid())
+  title         String
+  couponCode    String
+  discountValue String
+  termsText     String?
+  bgGradient    String   @default("from-primary to-secondary")
+  isActive      Boolean  @default(true)
+}
+
+model AnimationSettings {
+  id               String   @id @default(uuid())
+  smoothScroll     Boolean  @default(true)
+  parallaxStrength Float    @default(0.5)
+  hoverTiltEnabled Boolean  @default(true)
+  fadeTransitions  Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+}
+
+model WebMenu {
+  id        String   @id @default(uuid())
+  label     String
+  routePath String   @unique
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+}
+
+model PageSection {
+  id        String   @id @default(uuid())
+  sectionId String   @unique // hero, nowplaying, upcoming, food, membership
+  title     String
+  subtitle  String?
+  sortOrder Int      @default(0)
+  isVisible Boolean  @default(true)
+}
+
+model SEOSettings {
+  id          String   @id @default(uuid())
+  titlePrefix String   @default("Cinema Pro Max")
+  description String?
+  metaKeys    String[]
+  updatedAt   DateTime @updatedAt
+}
+
+model WebPopup {
+  id         String   @id @default(uuid())
+  title      String
+  bodyText   String
+  imageUrl   String?
+  buttonText String?
+  buttonLink String?
+  showDelay  Int      @default(2000) // ms
+  isActive   Boolean  @default(true)
+}
+
+// ═══════════════════════════════════════════════════
+// VOLUME 6 PART 14 — SEO & Deployment Manager
+// ═══════════════════════════════════════════════════
+
+model SeoOptimization {
+  id            String   @id @default(uuid())
+  domainName    String   @unique
+  googleConsole Boolean  @default(false)
+  robotsTxt     String?
+  sitemapUrl    String?
+  updatedAt     DateTime @updatedAt
+}
+
+model Keyword {
+  id          String   @id @default(uuid())
+  phrase      String   @unique
+  position    Int      @default(100)
+  competition String   @default("MEDIUM") // LOW, MEDIUM, HIGH
+  volume      Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+model PageMeta {
+  id           String   @id @default(uuid())
+  urlPath      String   @unique
+  title        String
+  description  String
+  ogImage      String?
+  canonicalUrl String?
+  keywords     String[]
+}
+
+model StructuredSchema {
+  id         String   @id @default(uuid())
+  pageUrl    String   @unique
+  schemaType String   // MOVIE, EVENT, FAQ, ORGANISATION
+  jsonData   Json
+  updatedAt  DateTime @updatedAt
+}
+
+model Blog {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  content     String
+  authorName  String
+  seoScore    Int      @default(70)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model SeoAnalytics {
+  id          String   @id @default(uuid())
+  googleScore Int      @default(90)
+  visitors    Int      @default(0)
+  views       Int      @default(0)
+  clicks      Int      @default(0)
+  avgPosition Float    @default(12.4)
+  domainAuth  Int      @default(45)
+  date        DateTime @default(now())
+}
+
+model PerformanceMetric {
+  id        String   @id @default(uuid())
+  pageUrl   String   @unique
+  loadTime  Float    @default(1.8) // in seconds
+  coreWeb   String   @default("GOOD") // GOOD, NEED_IMPROVEMENT, POOR
+  pageSize  Float    @default(1.2) // in MBs
+  updatedAt DateTime @updatedAt
+}
+
+model Deployment {
+  id         String   @id @default(uuid())
+  version    String
+  commitHash String
+  status     String   @default("SUCCESS") // SUCCESS, BUILDING, FAILED
+  deployedBy String
+  createdAt  DateTime @default(now())
+}
+
+model BackupRule {
+  id          String   @id @default(uuid())
+  name        String
+  frequency   String   // DAILY, WEEKLY, MONTHLY
+  destination String   // AWS_S3, GC_STORAGE
+  lastRun     DateTime?
+  isActive    Boolean  @default(true)
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  service   String   // FRONTEND, BACKEND, DATABASE
+  level     String   // INFO, WARNING, ERROR, CRITICAL
+  message   String
+  timestamp DateTime @default(now())
+}
+
+model AIModel {
+  id          String    @id @default(uuid())
+  name        String
+  code        String    @unique
+  description String?
+  accuracy    Float     @default(0.0)
+  isEnabled   Boolean   @default(true)
+  trainedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AIRequest {
+  id           String   @id @default(uuid())
+  modelCode    String
+  customerId   String?
+  payload      Json
+  ipAddress    String?
+  responseTime Float    @default(0.0)
+  createdAt    DateTime @default(now())
+}
+
+model AIResponse {
+  id         String   @id @default(uuid())
+  requestId  String   @unique
+  result     Json
+  confidence Float    @default(1.0)
+  createdAt  DateTime @default(now())
+}
+
+model Recommendation {
+  id          String   @id @default(uuid())
+  customerId  String
+  type        String   // MOVIE, FOOD, OFFER, SEAT
+  targetId    String
+  score       Float    @default(0.0)
+  reason      String?
+  isPresented Boolean  @default(false)
+  isClicked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Prediction {
+  id             String    @id @default(uuid())
+  targetType     String    // REVENUE, CHURN, INVENTORY, SATISFACTION
+  targetEntityId String?
+  predictedValue Float
+  actualValue    Float?
+  targetDate     DateTime
+  isCorrect      Boolean?
+  createdAt      DateTime  @default(now())
+}
+
+model CustomerProfileAI {
+  id                 String   @id @default(uuid())
+  customerId         String   @unique
+  predictedLtv       Float    @default(0.0)
+  churnProbability   Float    @default(0.0)
+  purchasePropensity Float    @default(0.0)
+  favGenre           String?
+  favFoodItem        String?
+  favSeatPattern     String?
+  lastAnalyzed       DateTime @default(now())
+}
+
+model AutomationRule {
+  id          String   @id @default(uuid())
+  name        String
+  triggerType String
+  conditions  Json
+  actions     Json
+  isActive    Boolean  @default(true)
+  runCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AITrainingData {
+  id        String   @id @default(uuid())
+  modelCode String
+  features  Json
+  labels    Json
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AIInsight {
+  id             String   @id @default(uuid())
+  category       String   // FINANCE, MARKETING, SECURITY, OPERATIONS
+  title          String
+  summary        String
+  dataPoints     Json?
+  impactScore    Float    @default(0.0)
+  suggestedAction String?
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model AIConversation {
+  id            String   @id @default(uuid())
+  customerId    String?
+  channel       String   // WEB, MOBILE, WHATSAPP, TELEGRAM, MESSENGER
+  history       Json
+  sentimentScore Float   @default(0.5)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AdminRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  permissions String[] @default([])
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AdminPermission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  module      String
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model DashboardSetting {
+  id         String   @id @default(uuid())
+  userId     String
+  key        String
+  value      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([userId, key])
+}
+
+model WebsiteSetting {
+  id         String   @id @default(uuid())
+  section    String
+  key        String
+  value      String
+  isActive   Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([section, key])
+}
+
+model MovieSetting {
+  id          String   @id @default(uuid())
+  movieId     String
+  displayType String   @default("STANDARD")
+  priority    Int      @default(0)
+  isFeatured  Boolean  @default(false)
+  isTrending  Boolean  @default(false)
+  isHidden    Boolean  @default(false)
+  bannerSize  String   @default("MEDIUM")
+  animStyle   String   @default("FADE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OfferSetting {
+  id             String   @id @default(uuid())
+  offerId        String
+  displaySection String   @default("HOMEPAGE")
+  priority       Int      @default(0)
+  targetAudience String   @default("ALL")
+  isAutoApply    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model NotificationSetting {
+  id        String   @id @default(uuid())
+  channel   String
+  event     String
+  isEnabled Boolean  @default(true)
+  template  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([channel, event])
+}
+
+model SystemConfiguration {
+  id          String   @id @default(uuid())
+  category    String
+  key         String
+  value       String
+  description String?
+  isEditable  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([category, key])
+}
+
+model AdminSession {
+  id         String   @id @default(uuid())
+  userId     String
+  ipAddress  String?
+  userAgent  String?
+  loginAt    DateTime @default(now())
+  logoutAt   DateTime?
+  isActive   Boolean  @default(true)
+}
+
+model PaymentOrder {
+  id        String   @id @default(uuid())
+  bookingId String
+  amount    Float
+  currency  String   @default("INR")
+  status    String   @default("PENDING") // PENDING, SUCCESS, FAILED, CANCELLED
+  gateway   String   // RAZORPAY, STRIPE, PAYPAL, UPI, WALLET
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  paymentId     String
+  transactionId String   @unique
+  method        String   // UPI, CARD, WALLET, NETBANKING
+  amount        Float
+  status        String   @default("SUCCESS")
+  timestamp     DateTime @default(now())
+}
+
+model Wallet {
+  id            String   @id @default(uuid())
+  customerId    String   @unique
+  balance       Float    @default(0.0)
+  bonusBalance  Float    @default(0.0)
+  rewardBalance Float    @default(0.0)
+  securityPin   String   @default("1234")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model WalletTransaction {
+  id          String   @id @default(uuid())
+  walletId    String
+  type        String   // CREDIT, DEBIT
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model Refund {
+  id            String   @id @default(uuid())
+  transactionId String
+  amount        Float
+  reason        String?
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED, SUCCESS
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  customerId  String   @unique
+  plan        String   // SILVER, GOLD, PLATINUM, DIAMOND, PREMIUM
+  status      String   @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED, PAUSED
+  renewalDate DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── CMS MODELS ───
+model WebsitePage {
+  id           String        @id @default(uuid())
+  slug         String        @unique
+  title        String
+  description  String?
+  seoKeywords  String[]      @default([])
+  published    Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sections     CmsSection[]
+}
+
+model CmsSection {
+  id          String         @id @default(uuid())
+  pageId      String
+  page        WebsitePage    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type        String
+  sortOrder   Int            @default(0)
+  isActive    Boolean        @default(true)
+  settings    Json
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  components  CmsComponent[]
+}
+
+model CmsComponent {
+  id          String       @id @default(uuid())
+  sectionId   String
+  section     CmsSection   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  type        String
+  sortOrder   Int          @default(0)
+  isActive    Boolean      @default(true)
+  content     Json
+  styling     Json
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model CmsTheme {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  colors         Json
+  fonts          Json
+  spacing        Json
+  borders        Json
+  shadows        Json
+  isDark         Boolean  @default(true)
+  isSystemActive Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MediaFile {
+  id          String   @id @default(uuid())
+  fileName    String
+  fileType    String
+  url         String
+  size        Int
+  category    String   @default("UNORGANIZED")
+  createdAt   DateTime @default(now())
+}
+
+model CmsVersion {
+  id          String   @id @default(uuid())
+  versionName String
+  editorEmail String
+  changes     Json
+  createdAt   DateTime @default(now())
+}
+
+model CmsTranslation {
+  id          String   @id @default(uuid())
+  locale      String
+  key         String
+  value       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([locale, key])
+}
+
+// ─── FINANCIAL METRICS ───
+model FinancialMetric {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  revenue   Float
+  expenses  Float
+  netProfit Float
+  taxAmount Float
+  cashFlow  Float
+}
+
+// ─── VOLUME 6 PART 26: NOTIFICATION SYSTEM ───
+model EmailRecord {
+  id        String   @id @default(uuid())
+  to        String
+  subject   String
+  body      String
+  status    String   @default("SENT") // SENT, FAILED
+  sentAt    DateTime @default(now())
+}
+
+model SmsRecord {
+  id        String   @id @default(uuid())
+  phone     String
+  message   String
+  senderId  String   @default("CPMAX")
+  status    String   @default("SENT") // SENT, FAILED
+  sentAt    DateTime @default(now())
+}
+
+model WhatsappMessage {
+  id        String   @id @default(uuid())
+  phone     String
+  message   String
+  status    String   @default("SENT") // SENT, FAILED
+  sentAt    DateTime @default(now())
+}
+
+model AutomationWorkflow {
+  id        String   @id @default(uuid())
+  name      String
+  trigger   String
+  condition String?
+  action    String
+  delayMins Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id        String   @id @default(uuid())
+  name      String
+  audience  String   // Segment (e.g. VIP, ALL, INACTIVE)
+  channel   String   // EMAIL, SMS, WHATSAPP, PUSH
+  template  String
+  sentCount Int      @default(0)
+  openCount Int      @default(0)
+  status    String   @default("PENDING") // PENDING, ACTIVE, COMPLETED
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String?
+  title     String
+  body      String
+  category  String   @default("GENERAL") // BOOKING, OFFERS, REWARDS, UPDATES, SECURITY
+  isRead    Boolean  @default(false)
+  sentAt    DateTime @default(now())
+}
+
+model SocialPost {
+  id          String   @id @default(uuid())
+  platform    String   // INSTAGRAM, FACEBOOK, YOUTUBE, X, TIKTOK, LINKEDIN
+  content     String
+  mediaUrl    String?
+  scheduledAt DateTime
+  published   Boolean  @default(false)
+  likes       Int      @default(0)
+  shares      Int      @default(0)
+  comments    Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model Advertisement {
+  id         String   @id @default(uuid())
+  platform   String   // GOOGLE_ADS, META_ADS, YOUTUBE_ADS
+  name       String
+  budget     Float
+  spend      Float    @default(0.0)
+  audience   String?
+  status     String   @default("ACTIVE") // ACTIVE, PAUSED, COMPLETED
+  clicks     Int      @default(0)
+  impressions Int     @default(0)
+  conversions Int     @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model Competitor {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  domainName   String?
+  googleRank   Int      @default(10)
+  averagePrice Float    @default(350.0)
+  activeOffers String[] @default([])
+  socialRating Float    @default(4.0)
+  updatedAt    DateTime @updatedAt
+}
+
+model Server {
+  id         String   @id @default(uuid())
+  name       String   @unique // FRONTEND, BACKEND, DATABASE, STORAGE, AUTH, PAYMENT, NOTIFICATION
+  ipAddress  String
+  status     String   @default("ONLINE") // ONLINE, OFFLINE, DEGRADED
+  cpuUsage   Float    @default(12.5)
+  ramUsage   Float    @default(45.2)
+  diskUsage  Float    @default(60.8)
+  networkIn  Float    @default(1.2) // in MB/s
+  networkOut Float    @default(0.8) // in MB/s
+  updatedAt  DateTime @updatedAt
+}
+
+model ServerMetric {
+  id         String   @id @default(uuid())
+  serverId   String
+  cpu        Float
+  ram        Float
+  network    Float
+  responseTime Float
+  timestamp  DateTime @default(now())
+}
+
+model BackupRecord {
+  id          String   @id @default(uuid())
+  fileName    String
+  fileSize    Float    // in MB
+  backupType  String   // FULL, INCREMENTAL, DATABASE, FILE, CONFIG, SECURITY
+  destination String   // AWS_S3, GC_STORAGE, AZURE_BLOB
+  status      String   @default("SUCCESS") // SUCCESS, FAILED, RUNNING
+  createdAt   DateTime @default(now())
+}
+
+model StorageFile {
+  id        String   @id @default(uuid())
+  name      String
+  folder    String   // Movies, Posters, Trailers, Users, Tickets, Employees, Documents, Website, 3D Assets, Reports, Backups
+  fileType  String
+  sizeBytes Int
+  url       String
+  createdAt DateTime @default(now())
+}
+
+model RecoveryPoint {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  backupId    String?
+  status      String   @default("AVAILABLE") // AVAILABLE, RESTORED
+  createdAt   DateTime @default(now())
+}
+
+model ErrorLog {
+  id          String   @id @default(uuid())
+  message     String
+  stackTrace  String?
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  resolved    Boolean  @default(false)
+  timestamp   DateTime @default(now())
+}
+
+model MonitoringAlert {
+  id        String   @id @default(uuid())
+  severity  String   // WARNING, CRITICAL
+  message   String
+  resolved  Boolean  @default(false)
+  timestamp DateTime @default(now())
+}
+
+
+
+model AIEvent {
+  id         String   @id @default(uuid())
+  name       String
+  payload    Json
+  processed  Boolean  @default(false)
+  timestamp  DateTime @default(now())
+}
+
+model AIAction {
+  id         String   @id @default(uuid())
+  name       String   // AUTO_PRICING, OFFER_CREATED, INVENTORY_ADJUSTED
+  triggerId  String?
+  result     String
+  timestamp  DateTime @default(now())
+}
+
+model AILog {
+  id         String   @id @default(uuid())
+  level      String   // INFO, WARNING, ERROR
+  message    String
+  timestamp  DateTime @default(now())
+}
+
+model AISetting {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  value      String
+  updatedAt  DateTime @updatedAt
+}
+
+
+
+model MovieSimilarity {
+  id             String   @id @default(uuid())
+  movieId        String
+  similarMovieId String
+  score          Float
+  updatedAt      DateTime @updatedAt
+  @@unique([movieId, similarMovieId])
+}
+
+model FoodSimilarity {
+  id            String   @id @default(uuid())
+  foodId        String
+  similarFoodId String
+  score         Float
+  updatedAt     DateTime @updatedAt
+  @@unique([foodId, similarFoodId])
+}
+
+model UserBehaviour {
+  id         String   @id @default(uuid())
+  customerId String
+  actionType String   // CLICK, VIEW_TRAILER, SEARCH, PURCHASE
+  targetId   String
+  metadata   Json?
+  timestamp  DateTime @default(now())
+}
+
+model CustomerJourney {
+  id         String   @id @default(uuid())
+  customerId String
+  stage      String   // DISCOVERY, INTEREST, SELECTION, PAYMENT, VISIT, REVIEW, REPEAT
+  timestamp  DateTime @default(now())
+}
+
+model AIFeedback {
+  id         String   @id @default(uuid())
+  customerId String
+  itemId     String
+  feedback   String   // LIKE, SKIP, DISLIKE
+  timestamp  DateTime @default(now())
+}
+
+model PersonalizedOffer {
+  id          String   @id @default(uuid())
+  customerId  String
+  offerCode   String
+  title       String
+  description String
+  discountVal Float
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+}
+
+model DemandScore {
+  id        String   @id @default(uuid())
+  movieId   String   @unique
+  score     Float
+  updatedAt DateTime @updatedAt
+}
+
+model PricingRule {
+  id           String   @id @default(uuid())
+  name         String
+  minPrice     Float
+  maxPrice     Float
+  discountLimit Float
+  premiumLimit Float
+  isActive     Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+}
+
+model SeatAnalytic {
+  id           String   @id @default(uuid())
+  showId       String
+  seatNumber   String
+  demandScore  Float    @default(0.0) // 0-100
+  bookingSpeed Float    @default(0.0)
+  updatedAt    DateTime @updatedAt
+  @@unique([showId, seatNumber])
+}
+
+model ShowPerformance {
+  id            String   @id @default(uuid())
+  showId        String   @unique
+  occupancyRate Float
+  totalRevenue  Float
+  updatedAt     DateTime @updatedAt
+}
+
+model Waitlist {
+  id         String   @id @default(uuid())
+  showId     String
+  customerId String
+  notified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model FraudDetection {
+  id          String   @id @default(uuid())
+  customerId  String
+  riskScore   Float
+  reason      String
+  status      String   @default("PENDING") // PENDING, BLOCKED, APPROVED
+  createdAt   DateTime @default(now())
+}
+
+model RevenueForecast {
+  id            String   @id @default(uuid())
+  forecastDate  DateTime @unique
+  expectedVal   Float
+  confidenceMin Float
+  confidenceMax Float
+  createdAt     DateTime @default(now())
+}
+
+model SpecialEvent {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  poster      String?
+  banner      String?
+  date        DateTime
+  time        String
+  location    String
+  screenId    String
+  capacity    Int
+  pricing     Float
+  rules       String[]
+  eventType   String   // PREMIERE, CELEBRITY, PRIVATE, CORPORATE, BIRTHDAY, GAMING, LIVE
+  createdAt   DateTime @default(now())
+}
+
+model EventPackage {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  items       String[]
+}
+
+model VipMember {
+  id             String   @id @default(uuid())
+  customerId     String   @unique
+  membershipLevel String   @default("SILVER") // SILVER, GOLD, PLATINUM, DIAMOND
+  points         Int      @default(0)
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+}
+
+model VipCard {
+  id              String   @id @default(uuid())
+  vipMemberId     String   @unique
+  photoUrl        String?
+  qrCode          String
+  expiryDate      DateTime
+}
+
+model EventBooking {
+  id         String   @id @default(uuid())
+  eventId    String
+  customerId String
+  packageId  String?
+  totalPaid  Float
+  status     String   @default("CONFIRMED")
+  createdAt  DateTime @default(now())
+}
+
+model GuestList {
+  id             String   @id @default(uuid())
+  eventId        String
+  name           String
+  role           String   // GUEST, VIP, MEDIA, SECURITY, STAFF
+  checkedIn      Boolean  @default(false)
+  checkInTime    DateTime?
+}
+
+model Invitation {
+  id         String   @id @default(uuid())
+  eventId    String
+  customerId String
+  status     String   @default("SENT") // SENT, OPENED, ACCEPTED, DECLINED
+  updatedAt  DateTime @updatedAt
+}
+
+model EventPayment {
+  id          String   @id @default(uuid())
+  bookingId   String   @unique
+  amount      Float
+  status      String   @default("PAID")
+  paymentType String   @default("FULL") // FULL, ADVANCE, REFUND
+  createdAt   DateTime @default(now())
+}
+
+model EventReview {
+  id         String   @id @default(uuid())
+  eventId    String
+  customerId String
+  rating     Int
+  feedback   String
+  createdAt  DateTime @default(now())
+}
+
+model Advertiser {
+  id          String   @id @default(uuid())
+  companyName String   @unique
+  contactName String
+  email       String
+  phone       String
+  createdAt   DateTime @default(now())
+}
+
+model AdCampaign {
+  id             String   @id @default(uuid())
+  advertiserId   String
+  name           String
+  adType         String   // SCREEN, DIGITAL_DISPLAY, FOOD_COUNTER, WEBSITE, MOBILE_APP, EVENT
+  audienceTarget String?
+  startDate      DateTime
+  endDate        DateTime
+  budget         Float
+  paymentStatus  String   @default("UNPAID") // UNPAID, PAID
+  goal           String?
+  createdAt      DateTime @default(now())
+}
+
+model AdSpace {
+  id        String @id @default(uuid())
+  name      String @unique // Audi 1 Screen, Lobby Screen A, Concession Counter Left, Website Home Banner
+  location  String // SCREEN, LOBBY, FOOD_COUNTER, WEBSITE, APP
+  pricing   Float
+  status    String @default("AVAILABLE") // AVAILABLE, BOOKED
+}
+
+model AdSchedule {
+  id          String   @id @default(uuid())
+  campaignId  String
+  spaceId     String
+  startTime   DateTime
+  endTime     DateTime
+  frequencyHz Float    @default(1.0) // runs per hour
+}
+
+model AdPayment {
+  id         String   @id @default(uuid())
+  campaignId String
+  amount     Float
+  status     String   @default("PAID")
+  createdAt  DateTime @default(now())
+}
+
+model AdAnalytics {
+  id          String   @id @default(uuid())
+  campaignId  String
+  views       Int      @default(0)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+model Sponsorship {
+  id          String   @id @default(uuid())
+  sponsorName String
+  packageType String   // PREMIERE, EVENT, FESTIVAL, SCREEN, FOOD
+  price       Float
+  benefits    String[]
+  createdAt   DateTime @default(now())
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  entityName  String
+  contractType String   // BRAND, FRANCHISE, SPONSORSHIP
+  terms       String
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("ACTIVE") // ACTIVE, EXPIRED, TERMINATED
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  domain    String?
+  createdAt DateTime @default(now())
+}
+
+model Theatre {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  locationId     String
+  address        String
+  contact        String
+  managerName    String
+  screensCount   Int      @default(1)
+  capacity       Int
+  status         String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt      DateTime @default(now())
+}
+
+model TheatreLocation {
+  id        String @id @default(uuid())
+  city      String
+  region    String
+  branch    String
+  country   String
+  @@unique([city, branch])
+}
+
+model Franchise {
+  id           String   @id @default(uuid())
+  partnerName  String   @unique
+  companyName  String
+  location     String
+  revenueShare Float    @default(15.0) // 15% to super admin
+  investment   Float
+  status       String   @default("PENDING") // PENDING, ACTIVE, SUSPENDED
+  createdAt    DateTime @default(now())
+}
+
+model FranchiseUser {
+  id          String @id @default(uuid())
+  franchiseId String
+  userId      String @unique
+}
+
+model RegionalReport {
+  id        String   @id @default(uuid())
+  region    String
+  revenue   Float
+  bookings  Int
+  createdDate DateTime @default(now())
+}
+
+model ChainSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+}
+
+model GlobalMembership {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  discountPct Float
+  price       Float
+}
+
+model RevenueShare {
+  id          String   @id @default(uuid())
+  franchiseId String
+  amountPaid  Float
+  monthYear   String
+  createdAt   DateTime @default(now())
+}
+
+model PlatformUser {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      String   // SUPER_ADMIN, PLATFORM_DEVELOPER, platform_finance
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+}
+
+model Tenant {
+  id               String   @id @default(uuid())
+  companyName      String   @unique
+  ownerName        String
+  email            String
+  phone            String
+  address          String
+  subscriptionPlan String
+  status           String   @default("PENDING") // PENDING, ACTIVE, SUSPENDED
+  createdAt        DateTime @default(now())
+}
+
+model SaaSSubscription {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  planCode    String   // BASIC, PROFESSIONAL, ENTERPRISE, PREMIUM
+  status      String   @default("ACTIVE")
+  renewalDate DateTime
+  createdAt   DateTime @default(now())
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  price       Float
+  features    String[]
+  maxScreens  Int
+  maxUsers    Int
+}
+
+model BillingRecord {
+  id         String   @id @default(uuid())
+  tenantId   String
+  amount     Float
+  status     String   @default("PAID")
+  billingDate DateTime @default(now())
+}
+
+model FeatureFlag {
+  id        String  @id @default(uuid())
+  tenantId  String
+  feature   String
+  isEnabled Boolean @default(false)
+  @@unique([tenantId, feature])
+}
+
+model TenantApiKey {
+  id         String   @id @default(uuid())
+  tenantId   String
+  keyHash    String   @unique
+  rateLimit  Int      @default(100) // req per minute
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model UsageMetric {
+  id          String   @id @default(uuid())
+  tenantId    String
+  apiCalls    Int      @default(0)
+  storageUsed Int      @default(0) // in MBs
+  updatedAt   DateTime @updatedAt
+}
+
+

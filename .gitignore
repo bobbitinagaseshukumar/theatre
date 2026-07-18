@@ -1,0 +1,38 @@
+# ─── Dependencies ───
+node_modules/
+**/node_modules/
+
+# ─── Build output ───
+dist/
+build/
+**/dist/
+**/build/
+
+# ─── Environment / secrets ───
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ─── Prisma ───
+backend/prisma/migrations/dev.db*
+
+# ─── Logs ───
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# ─── Editor / OS ───
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ─── Misc ───
+*.local
+coverage/
+.cache/
