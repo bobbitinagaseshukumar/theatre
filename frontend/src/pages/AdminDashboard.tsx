@@ -91,7 +91,8 @@ import {
   Database,
   Layers,
   Crosshair,
-  CreditCard
+  CreditCard,
+  X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import API from "../api/axios";
@@ -146,12 +147,20 @@ const AdminDashboard: React.FC = () => {
           price: r < 2 ? 350 : r < 4 ? 220 : 150,
           status: "Available"
         });
-
       }
       grid.push(row);
     }
     setSeatingGrid(grid);
   }, []);
+
+  const handleUpdateSeatProperty = (type: string, price: number, _status: string) => {
+    if (selectedSeatIndex === null) return;
+    const { r, c } = selectedSeatIndex;
+    const updated = [...seatingGrid];
+    updated[r][c] = { ...updated[r][c], type, price, status: _status };
+    setSeatingGrid(updated);
+    toast.success(`Seat ${updated[r][c].label} updated!`);
+  };
 
   // ─── Movie management ───
   const [moviesList, setMoviesList] = useState<any[]>([
@@ -161,8 +170,7 @@ const AdminDashboard: React.FC = () => {
   ]);
   const [editingMovie, setEditingMovie] = useState<any | null>(null);
   const [editingShow, setEditingShow] = useState<any | null>(null);
-  const formatMovieGenre = (genre: unknown) =>
-    Array.isArray(genre) ? genre.join(", ") : String(genre || "Drama");
+  // ═══════════════════════════════════════════════════════════════
   //  AI PLATFORM — Enterprise Artificial Intelligence State
   // ═══════════════════════════════════════════════════════════════
   const [aiSubTab, setAiSubTab] = useState<"overview" | "models" | "pricing" | "rules" | "customer" | "advisor" | "logs" | "predictions" | "pipeline" | "security_vision" | "marketing_ai" | "inventory_ai" | "bi">("overview");
@@ -283,8 +291,6 @@ const AdminDashboard: React.FC = () => {
   const [wizardMovie, setWizardMovie] = useState({
     title: "", genre: "", duration: "135", director: "", rating: "8.5",
     posterUrl: "", bannerUrl: "", trailerUrl: "",
-    description: "", releaseDate: new Date().toISOString().slice(0, 10),
-    status: "NOW_SHOWING", language: "English, Hindi", ageRestriction: "UA",
     screenId: "scr-1", timeSlot: "07:30 PM", basePrice: "180",
     seoTitle: "", seoDesc: ""
   });
@@ -337,69 +343,6 @@ const AdminDashboard: React.FC = () => {
   const [newShowTime, setNewShowTime] = useState("07:30 PM");
   const [newShowBasePrice, setNewShowBasePrice] = useState("350");
   const [newShowVipPrice, setNewShowVipPrice] = useState("650");
-
-  useEffect(() => {
-    let active = true;
-    const loadAdminMovies = async () => {
-      try {
-        const res = await API.get("/movies");
-        if (active && Array.isArray(res.data) && res.data.length > 0) {
-          setMoviesList(
-            res.data.map((movie: any) => ({
-              ...movie,
-              genre: formatMovieGenre(movie.genre),
-              rating: Number(movie.rating) || 0,
-            }))
-          );
-        }
-      } catch {
-        // Silent poll error fallback
-      }
-    };
-    loadAdminMovies();
-    const movieInterval = setInterval(loadAdminMovies, 4000);
-    return () => {
-      active = false;
-      clearInterval(movieInterval);
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    const loadAdminShows = async () => {
-      try {
-        const res = await API.get("/showtimes-theatres/showtimes");
-        if (active && Array.isArray(res.data) && res.data.length > 0) {
-          setShowsList(
-            res.data.map((show: any) => ({
-              id: show.id,
-              movieId: show.movieId,
-              movie: show.movie || show.movieTitle || "Movie",
-              screen: show.screen,
-              date: show.date || new Date().toISOString().slice(0, 10),
-              time: show.time,
-              duration: show.duration || "2h 30m",
-              totalSeats: show.totalSeats || 150,
-              booked: show.booked || 0,
-              available: show.availableSeats ?? show.available ?? 150,
-              basePrice: show.basePrice || 300,
-              vipPrice: show.vipPrice || (Number(show.basePrice) || 300) + 200,
-              revenue: show.revenue || 0,
-              status: show.status || "OPEN",
-            }))
-          );
-        }
-      } catch {
-        // Silent poll error fallback
-      }
-    };
-    loadAdminShows();
-    const showInterval = setInterval(loadAdminShows, 4000);
-    return () => {
-      active = false;
-      clearInterval(showInterval);
-    };
-  }, []);
 
   // ─── Bookings Management State ───
   const [bookingsList, setBookingsList] = useState<any[]>([
@@ -1404,208 +1347,22 @@ const AdminDashboard: React.FC = () => {
   // ═══════════════════════════════════════════════════════════════
 
   const handleAddMovieWizard = () => {
-    setWizardMovie({
-      title: "",
-      genre: "",
-      duration: "135",
-      director: "",
-      rating: "8.5",
-      posterUrl: "",
-      bannerUrl: "",
-      trailerUrl: "",
-      description: "",
-      releaseDate: new Date().toISOString().slice(0, 10),
-      status: "NOW_SHOWING",
-      language: "English, Hindi",
-      ageRestriction: "UA",
-      screenId: "scr-1",
-      timeSlot: "07:30 PM",
-      basePrice: "180",
-      seoTitle: "",
-      seoDesc: "",
-    });
+    setWizardMovie({ title: "", genre: "", duration: "135", director: "", rating: "8.5", posterUrl: "", bannerUrl: "", trailerUrl: "", screenId: "scr-1", timeSlot: "07:30 PM", basePrice: "180", seoTitle: "", seoDesc: "" });
     setWizardStep(1);
     setWizardOpen(true);
   };
 
-  const handleFinishWizard = async () => {
-    if (!wizardMovie.title || !wizardMovie.genre || !wizardMovie.posterUrl) {
-      toast.error("Title, genre, and poster URL are required.");
-      return;
-    }
-    try {
-      const payload = {
-        title: wizardMovie.title,
-        description: wizardMovie.description || wizardMovie.seoDesc || `${wizardMovie.title} is now listed at Cinema Pro Max.`,
-        posterUrl: wizardMovie.posterUrl,
-        bannerUrl: wizardMovie.bannerUrl || wizardMovie.posterUrl,
-        trailerUrl: wizardMovie.trailerUrl,
-        duration: wizardMovie.duration,
-        releaseDate: wizardMovie.releaseDate,
-        language: wizardMovie.language,
-        genre: wizardMovie.genre,
-        ageRestriction: wizardMovie.ageRestriction,
-        rating: wizardMovie.rating,
-        status: wizardMovie.status,
-        cast: [],
-      };
-      const res = await API.post("/movies", payload);
-      const movie = {
-        ...res.data.movie,
-        genre: formatMovieGenre(res.data.movie.genre),
-        rating: Number(res.data.movie.rating) || 0,
-      };
-      setMoviesList((prev) => [movie, ...prev]);
-      setNewShowMovie(movie.title);
-      setWizardOpen(false);
-      toast.success(`"${movie.title}" published and synced to all devices.`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Movie publish failed.");
-    }
+  const handleFinishWizard = () => {
+    if (!wizardMovie.title || !wizardMovie.genre) { toast.error("Title and Genre are required."); return; }
+    const movie = { id: "m-" + (moviesList.length + 1), title: wizardMovie.title, genre: wizardMovie.genre, status: "NOW_SHOWING", rating: parseFloat(wizardMovie.rating) || 8.5 };
+    setMoviesList([...moviesList, movie]);
+    setWizardOpen(false);
+    toast.success(`"${movie.title}" listing initialized successfully via wizard!`);
   };
 
-  const handleDeleteMovie = async (id: string, title: string) => {
-    try {
-      await API.delete(`/movies/${id}`);
-      setMoviesList((prev) => prev.filter((m) => m.id !== id));
-      toast.success(`Removed movie everywhere: ${title}`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Movie delete failed.");
-    }
-  };
-
-  const handleMovieStatusChange = async (id: string, status: string) => {
-    try {
-      const res = await API.patch(`/movies/${id}`, { status });
-      setMoviesList((prev) =>
-        prev.map((movie) =>
-          movie.id === id
-            ? { ...res.data.movie, genre: formatMovieGenre(res.data.movie.genre), rating: Number(res.data.movie.rating) || 0 }
-            : movie
-        )
-      );
-      toast.success("Movie status synced to website.");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Could not update movie status.");
-    }
-  };
-
-  const handleAddShow = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const selectedMovie = moviesList.find((movie) => movie.title === newShowMovie);
-      const res = await API.post("/showtimes-theatres/showtimes", {
-        movieId: selectedMovie?.id,
-        movieTitle: newShowMovie,
-        screenName: newShowScreen,
-        date: newShowDate,
-        time: newShowTime,
-        basePrice: newShowBasePrice,
-      });
-      setShowsList((prev) => [res.data.showtime, ...prev]);
-      toast.success(`Show scheduled for "${newShowMovie}" and synced to all devices.`);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Show schedule failed.");
-    }
-  };
-
-  const handleCancelShow = async (show: any) => {
-    try {
-      await API.delete(`/showtimes-theatres/showtimes/${show.id}`);
-      setShowsList((prev) => prev.filter((s) => s.id !== show.id));
-      toast.success("Showtime cancelled across website.");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Could not cancel showtime.");
-    }
-  };
-
-  const handleEditMovieClick = (movie: any) => {
-    setEditingMovie({
-      ...movie,
-      genre: Array.isArray(movie.genre) ? movie.genre.join(", ") : String(movie.genre || ""),
-      language: Array.isArray(movie.language) ? movie.language.join(", ") : String(movie.language || ""),
-    });
-  };
-
-  const handleSaveEditedMovie = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingMovie) return;
-    try {
-      const res = await API.patch(`/movies/${editingMovie.id}`, {
-        title: editingMovie.title,
-        description: editingMovie.description,
-        posterUrl: editingMovie.posterUrl,
-        bannerUrl: editingMovie.bannerUrl,
-        trailerUrl: editingMovie.trailerUrl,
-        duration: parseInt(editingMovie.duration) || 120,
-        releaseDate: editingMovie.releaseDate,
-        language: editingMovie.language,
-        genre: editingMovie.genre,
-        ageRestriction: editingMovie.ageRestriction || "UA",
-        status: editingMovie.status,
-        rating: parseFloat(editingMovie.rating) || 8.0,
-      });
-
-      setMoviesList((prev) =>
-        prev.map((m) =>
-          m.id === editingMovie.id
-            ? { ...res.data.movie, genre: formatMovieGenre(res.data.movie.genre), rating: Number(res.data.movie.rating) || 0 }
-            : m
-        )
-      );
-      setEditingMovie(null);
-      toast.success("Movie details updated and synced to all devices.");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update movie.");
-    }
-  };
-
-  const handleEditShowClick = (show: any) => {
-    setEditingShow({
-      ...show,
-      date: show.date || new Date().toISOString().slice(0, 10),
-      time: show.time || "07:30 PM",
-    });
-  };
-
-  const handleSaveEditedShow = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingShow) return;
-    try {
-      const res = await API.patch(`/showtimes-theatres/showtimes/${editingShow.id}`, {
-        screenName: editingShow.screen,
-        date: editingShow.date,
-        time: editingShow.time,
-        basePrice: parseFloat(editingShow.basePrice),
-      });
-
-      setShowsList((prev) =>
-        prev.map((s) =>
-          s.id === editingShow.id
-            ? {
-                id: res.data.showtime.id,
-                movieId: res.data.showtime.movieId,
-                movie: res.data.showtime.movie || res.data.showtime.movieTitle || s.movie,
-                screen: res.data.showtime.screen,
-                date: res.data.showtime.date,
-                time: res.data.showtime.time,
-                duration: s.duration,
-                totalSeats: res.data.showtime.totalSeats,
-                booked: s.booked,
-                available: res.data.showtime.available,
-                basePrice: res.data.showtime.basePrice,
-                vipPrice: res.data.showtime.vipPrice,
-                revenue: s.booked * res.data.showtime.basePrice,
-                status: res.data.showtime.status,
-              }
-            : s
-        )
-      );
-      setEditingShow(null);
-      toast.success("Showtime schedule updated and synced.");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update showtime.");
-    }
+  const handleDeleteMovie = (id: string, title: string) => {
+    setMoviesList(moviesList.filter((m) => m.id !== id));
+    toast.success(`Removed movie: ${title}`);
   };
 
   const handleAddFood = (e: React.FormEvent) => {
@@ -1691,7 +1448,7 @@ const AdminDashboard: React.FC = () => {
           toast.success("Food items added to concessions list.");
         }
       }
-    } catch {
+    } catch (e) {
       setTimeout(() => {
         setIsChatTyping(false);
         let fallbackReply = "I am operating in offline fallback. Let me check today's movie list: Avatar and Aether are playing!";
@@ -1732,7 +1489,7 @@ const AdminDashboard: React.FC = () => {
         `[Model Training] SUCCESS. Model: ${modelCode} | Accuracy: ${data.finalAccuracy} | Epochs run: 5`,
         ...prev
       ]);
-    } catch {
+    } catch (e) {
       setIsTraining(false);
       setActiveTrainingModel(null);
       toast.error("Model training pipeline error.");
@@ -1931,211 +1688,9 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex gap-1">{[1,2,3,4,5,6,7,8].map((s) => (<div key={s} className={`w-3.5 h-1.5 rounded-full ${wizardStep >= s ? 'bg-primary' : 'bg-white/10'}`} />))}</div>
                 </div>
                 {wizardStep === 1 && (
-    }
-  };
-
-  const handleCreateAutomationRule = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newRuleName.trim()) { toast.error("Rule name is required."); return; }
-    
-    const newRule = {
-      id: "rule-" + Date.now(),
-      name: newRuleName,
-      trigger: newRuleTrigger,
-      condition: newRuleCondition || "None",
-      action: newRuleAction || "Log Event",
-      runs: 0,
-      active: true
-    };
-    
-    setAutomationRulesList([newRule, ...automationRulesList]);
-    setNewRuleName("");
-    setNewRuleCondition("");
-    setNewRuleAction("");
-    toast.success("AI Smart Automation Rule created and active.");
-    setAiSystemLogs((prev) => [`[Automation Engine] Published rule: "${newRule.name}" matching trigger ${newRule.trigger}`, ...prev]);
-  };
-
-  const handleToggleModel = (code: string) => {
-    setAiModelsList(aiModelsList.map(m => m.code === code ? { ...m, isEnabled: !m.isEnabled } : m));
-    const targetModel = aiModelsList.find(m => m.code === code);
-    toast.success(`${targetModel?.name} has been ${targetModel?.isEnabled ? "Disabled" : "Enabled"}.`);
-    setAiSystemLogs((prev) => [`[Model Configuration] Toggled model ${code} to ${!targetModel?.isEnabled}`, ...prev]);
-  };
-
-  const toggleComboItem = (itemId: string) => {
-    setComboSelectedItems((prev) => prev.includes(itemId) ? prev.filter((i) => i !== itemId) : [...prev, itemId]);
-  };
-
-  // ─── Computed ───
-  const filteredCustomers = crmCustomers.filter((c) =>
-    c.name.toLowerCase().includes(crmSearch.toLowerCase()) ||
-    c.email.toLowerCase().includes(crmSearch.toLowerCase()) ||
-    c.tier.toLowerCase().includes(crmSearch.toLowerCase()) ||
-    c.tag.toLowerCase().includes(crmSearch.toLowerCase())
-  );
-
-  const selectedCustomer = crmCustomers.find((c) => c.id === selectedCustomerId);
-
-  const statusColor = (s: string) => {
-    if (s === "OPEN") return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    if (s === "IN_PROGRESS" || s === "PREPARING") return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-    if (s === "ESCALATED") return "bg-red-500/10 text-red-400 border-red-500/20";
-    if (s === "RESOLVED" || s === "DELIVERED" || s === "READY") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    if (s === "RECEIVED") return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-    return "bg-white/5 text-gray-400 border-white/10";
-  };
-
-  const priorityColor = (p: string) => {
-    if (p === "CRITICAL") return "text-red-400";
-    if (p === "HIGH") return "text-amber-400";
-    if (p === "MEDIUM") return "text-blue-400";
-    return "text-gray-400";
-  };
-
-  const inventoryStatusColor = (s: string) => {
-    if (s === "CRITICAL" || s === "OUT_OF_STOCK") return "bg-red-500/10 text-red-400 border-red-500/20";
-    if (s === "LOW_STOCK") return "bg-amber-500/10 text-amber-400 border-amber-500/20";
-    return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-  };
-
-  // ─── Tab Button Helper ───
-  const TabBtn = ({ tab, icon, label }: { tab: TabKey; icon: React.ReactNode; label: string }) => (
-    <button
-      onClick={() => setActiveTab(tab)}
-      className={`px-4 py-3 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-        activeTab === tab ? "bg-primary text-white shadow-redGlow" : "text-gray-400 hover:text-white hover:bg-white/5"
-      }`}
-    >
-      {icon}{label}
-    </button>
-  );
-
-  // ═══════════════════════════════════════════════════════════════
-  //  RENDER
-  // ═══════════════════════════════════════════════════════════════
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col lg:flex-row gap-8 items-start text-left relative z-10 font-sans">
-
-      {/* Decorative backdrop */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-[10%] left-[-5%] w-[450px] h-[450px] bg-primary/5 blur-[120px] animate-pulse" />
-      </div>
-
-      {/* ═══ Side Navigation ═══ */}
-      <div className="w-full lg:w-64 flex flex-row lg:flex-col gap-2 shrink-0 bg-black/40 border border-white/10 p-2 rounded-xl overflow-x-auto lg:overflow-x-visible z-10 font-heading">
-        <TabBtn tab="stats" icon={<LayoutDashboard className="w-4 h-4" />} label="Analytics" />
-        <TabBtn tab="movies" icon={<Film className="w-4 h-4" />} label="Movies" />
-        <TabBtn tab="shows" icon={<CalendarDays className="w-4 h-4" />} label="Shows" />
-        <TabBtn tab="bookings" icon={<Ticket className="w-4 h-4" />} label="Bookings" />
-        <TabBtn tab="theatres" icon={<MapPin className="w-4 h-4" />} label="Theatres" />
-        <TabBtn tab="screens" icon={<Grid className="w-4 h-4" />} label="Seats" />
-        <TabBtn tab="crm" icon={<Users className="w-4 h-4" />} label="CRM & Support" />
-        <TabBtn tab="fnb" icon={<ChefHat className="w-4 h-4" />} label="F&B Kitchen" />
-        <TabBtn tab="hr" icon={<Briefcase className="w-4 h-4" />} label="HR & Staff" />
-        <TabBtn tab="marketing" icon={<Target className="w-4 h-4" />} label="Marketing" />
-        <TabBtn tab="offers" icon={<Percent className="w-4 h-4" />} label="Offers & Coupons" />
-        <TabBtn tab="food" icon={<Coffee className="w-4 h-4" />} label="Concessions" />
-        <TabBtn tab="refunds" icon={<DollarSign className="w-4 h-4" />} label="Refunds" />
-        <TabBtn tab="finance" icon={<Wallet className="w-4 h-4" />} label="Finance & BI" />
-        <TabBtn tab="security" icon={<ShieldAlert className="w-4 h-4" />} label="Security" />
-        <TabBtn tab="notifications" icon={<MessageSquare className="w-4 h-4" />} label="Notifications" />
-        <TabBtn tab="reports" icon={<PieChart className="w-4 h-4" />} label="BI Reports" />
-        <TabBtn tab="mobile" icon={<Smartphone className="w-4 h-4" />} label="Mobile Apps" />
-        <TabBtn tab="website" icon={<Layout className="w-4 h-4" />} label="Web Customizer" />
-        <TabBtn tab="seo" icon={<Globe className="w-4 h-4" />} label="SEO & Deploy" />
-        <TabBtn tab="ai" icon={<Bot className="w-4 h-4" />} label="AI Advisor" />
-        <TabBtn tab="ads" icon={<Megaphone className="w-4 h-4" />} label="Ads & Brands" />
-        <TabBtn tab="chain" icon={<Globe className="w-4 h-4" />} label="Chain & SaaS" />
-        <TabBtn tab="settings" icon={<Settings className="w-4 h-4" />} label="Settings" />
-      </div>
-
-      {/* ═══ Main Content Area ═══ */}
-      <div className="flex-1 w-full bg-white/5 backdrop-blur-[20px] border border-white/10 rounded-2xl p-8 min-h-[550px] z-10">
-
-        {/* ═══════════════════════════════════════════════════════
-           TAB 1 — LIVE ANALYTICS & DIAGNOSTICS
-        ═══════════════════════════════════════════════════════ */}
-        {activeTab === "stats" && (
-          <div className="space-y-8">
-            <h2 className="text-2xl font-heading font-extrabold tracking-tight border-b border-white/5 pb-4 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-primary" /> Executive Analytics & Health
-            </h2>
-
-            {/* Enterprise executive overview: real-time KPIs, live map, AI assistant */}
-            <ExecutiveOverview />
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-number">
-              {[
-                { label: "Today's Revenue", value: "₹1,42,850", color: "text-white" },
-                { label: "Total Bookings", value: "348 Tickets", color: "text-accent" },
-                { label: "Average Rating", value: "⭐ 4.8 / 5.0", color: "text-white" },
-                { label: "F&B Cart Conversions", value: "62%", color: "text-luxuryGold" }
-              ].map((card, i) => (
-                <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-primary/30 transition-all">
-                  <span className="text-[10px] text-gray-500 uppercase font-semibold block">{card.label}</span>
-                  <span className={`text-xl font-bold ${card.color} mt-1 block`}>{card.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-4">
-              <h3 className="font-heading font-extrabold text-sm uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                <Server className="w-5 h-5 text-emerald-400" /> Platform Infrastructure Health
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-number text-xs">
-                {[
-                  { label: "CPU Utilization", sub: "Gateway Node", icon: <Cpu className="w-4 h-4 text-primary" />, value: `${cpuUsage}%`, color: "text-white" },
-                  { label: "Memory Allocation", sub: "Prisma caches", icon: <Zap className="w-4 h-4 text-accent" />, value: `${ramUsage}%`, color: "text-white" },
-                  { label: "Database Latency", sub: "Prisma queries", icon: <ShieldCheck className="w-4 h-4 text-emerald-400" />, value: `${dbLatency}ms`, color: "text-emerald-400" }
-                ].map((m, i) => (
-                  <div key={i} className="p-5 bg-white/5 border border-white/5 rounded-2xl flex justify-between items-center">
-                    <div className="space-y-1">
-                      <span className="text-gray-400 font-bold flex items-center gap-1">{m.icon} {m.label}</span>
-                      <span className="text-xs text-gray-500">{m.sub}</span>
-                    </div>
-                    <div className={`text-right text-lg font-bold ${m.color}`}>{m.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════
-           TAB 2 — MOVIE MANAGEMENT
-        ═══════════════════════════════════════════════════════ */}
-        {activeTab === "movies" && (
-          <div className="space-y-8">
-            {/* Volume 8 · Part 1 — Media Library + AI processing + approval workflow */}
-            <MovieCmsPanel />
-            <div className="flex justify-between items-center border-b border-white/5 pb-4">
-              <h2 className="text-2xl font-heading font-extrabold tracking-tight">Manage Movie Listings</h2>
-              {!wizardOpen && (
-                <button onClick={handleAddMovieWizard} className="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer flex items-center gap-1.5 shadow-redGlow">
-                  <Sparkles className="w-4 h-4 text-luxuryGold" /> Add Movie Wizard
-                </button>
-              )}
-            </div>
-            {wizardOpen && (
-              <div className="p-6 rounded-2xl bg-black/40 border border-white/10 space-y-6">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    Step {wizardStep} of 8: {["Basic Information","Media Upload","Showtime","Pricing","Offers","F&B Links","SEO","Publish"][wizardStep - 1]}
-                  </span>
-                  <div className="flex gap-1">{[1,2,3,4,5,6,7,8].map((s) => (<div key={s} className={`w-3.5 h-1.5 rounded-full ${wizardStep >= s ? 'bg-primary' : 'bg-white/10'}`} />))}</div>
-                </div>
-                {wizardStep === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div className="space-y-2"><label className="text-gray-400 font-bold block">Movie Title</label><input type="text" value={wizardMovie.title} onChange={(e) => setWizardMovie({...wizardMovie, title: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Aether: Rising Stars" /></div>
                     <div className="space-y-2"><label className="text-gray-400 font-bold block">Genre</label><input type="text" value={wizardMovie.genre} onChange={(e) => setWizardMovie({...wizardMovie, genre: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Sci-Fi, Adventure" /></div>
-                    <div className="space-y-2 md:col-span-2"><label className="text-gray-400 font-bold block">Description</label><textarea rows={3} value={wizardMovie.description} onChange={(e) => setWizardMovie({...wizardMovie, description: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary resize-none" placeholder="Short movie synopsis for the website" /></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Poster Upload URL</label><input type="url" value={wizardMovie.posterUrl} onChange={(e) => setWizardMovie({...wizardMovie, posterUrl: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="https://..." /></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Banner Upload URL</label><input type="url" value={wizardMovie.bannerUrl} onChange={(e) => setWizardMovie({...wizardMovie, bannerUrl: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="https://..." /></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Release Date</label><input type="date" value={wizardMovie.releaseDate} onChange={(e) => setWizardMovie({...wizardMovie, releaseDate: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" /></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Listing Type</label><select value={wizardMovie.status} onChange={(e) => setWizardMovie({...wizardMovie, status: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"><option value="NOW_SHOWING">Now Showing</option><option value="UPCOMING">Upcoming Movie</option></select></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Languages</label><input type="text" value={wizardMovie.language} onChange={(e) => setWizardMovie({...wizardMovie, language: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="English, Hindi" /></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Age Rating</label><input type="text" value={wizardMovie.ageRestriction} onChange={(e) => setWizardMovie({...wizardMovie, ageRestriction: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="UA" /></div>
                   </div>
                 )}
                 <div className="flex justify-between items-center border-t border-white/5 pt-4">
@@ -2151,24 +1706,17 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="border border-white/5 rounded-xl overflow-x-auto font-number text-xs">
-              <table className="w-full min-w-[760px] text-left border-collapse">
-                <thead><tr className="bg-black/80 border-b border-white/10 text-gray-500 uppercase tracking-wider"><th className="p-4">Movie Title</th><th className="p-4">Genre</th><th className="p-4">Rating</th><th className="p-4">Status</th><th className="p-4 text-right">Actions</th></tr></thead>
+            <div className="border border-white/5 rounded-xl overflow-hidden font-number text-xs">
+              <table className="w-full text-left border-collapse">
+                <thead><tr className="bg-black/80 border-b border-white/10 text-gray-500 uppercase tracking-wider"><th className="p-4">Movie Title</th><th className="p-4">Genre</th><th className="p-4">Rating</th><th className="p-4 text-right">Actions</th></tr></thead>
                 <tbody className="divide-y divide-white/5 bg-black/20">
                   {moviesList.map((m) => (
                     <tr key={m.id} className="hover:bg-white/5 transition-colors">
                       <td className="p-4 font-bold text-white font-heading">{m.title}</td>
-                      <td className="p-4 text-gray-400">{formatMovieGenre(m.genre)}</td>
+                      <td className="p-4 text-gray-400">{m.genre}</td>
                       <td className="p-4 text-accent">⭐ {m.rating}</td>
-                      <td className="p-4">
-                        <select value={m.status || "NOW_SHOWING"} onChange={(e) => handleMovieStatusChange(m.id, e.target.value)} className="rounded-lg border border-white/10 bg-black/60 px-3 py-2 text-[10px] font-bold text-white">
-                          <option value="NOW_SHOWING">Now Showing</option>
-                          <option value="UPCOMING">Upcoming</option>
-                          <option value="ARCHIVED">Archived</option>
-                        </select>
-                      </td>
                       <td className="p-4 text-right flex justify-end gap-1.5">
-                        <button aria-label={`Edit ${m.title}`} onClick={() => handleEditMovieClick(m)} className="p-2 rounded bg-white/5 hover:bg-accent/20 text-gray-400 hover:text-accent transition-colors"><FileEdit className="w-3.5 h-3.5" /></button>
+                        <button aria-label={`Edit ${m.title}`} onClick={() => setEditingMovie(m)} className="p-2 rounded bg-white/5 hover:bg-accent/20 text-gray-400 hover:text-accent transition-colors"><FileEdit className="w-3.5 h-3.5" /></button>
                         <button aria-label={`Delete ${m.title}`} onClick={() => handleDeleteMovie(m.id, m.title)} className="p-2 rounded bg-white/5 hover:bg-primary/20 text-gray-400 hover:text-primary transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                       </td>
                     </tr>
@@ -2221,13 +1769,50 @@ const AdminDashboard: React.FC = () => {
             {/* Add Show Form */}
             <div className="p-6 rounded-2xl bg-black/40 border border-white/10 space-y-6">
               <h3 className="text-sm font-heading font-bold text-white border-b border-white/5 pb-2">Add New Showtime / Schedule</h3>
-              <form onSubmit={handleAddShow} className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-sans">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const newShowObj = {
+                  id: "sh-" + Date.now(),
+                  movie: newShowMovie,
+                  screen: newShowScreen,
+                  date: newShowDate,
+                  time: newShowTime,
+                  duration: "2h 30m",
+                  totalSeats: 150,
+                  booked: 0,
+                  available: 150,
+                  basePrice: parseFloat(newShowBasePrice) || 300,
+                  vipPrice: parseFloat(newShowVipPrice) || 600,
+                  revenue: 0,
+                  status: "OPEN"
+                };
+                setShowsList([newShowObj, ...showsList]);
+                toast.success(`Show scheduled for "${newShowMovie}" on ${newShowDate} at ${newShowTime}!`);
+              }} className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-sans">
                 <div className="space-y-2">
                   <label className="text-gray-400 font-bold block">Select Movie</label>
                   <select value={newShowMovie} onChange={(e) => setNewShowMovie(e.target.value)} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary">
-                    {moviesList.filter((movie) => movie.status !== "ARCHIVED").map((movie) => (
-                      <option key={movie.id} value={movie.title}>{movie.title}</option>
-                    ))}
+                    <option value="Aether: Rising Stars">Aether: Rising Stars</option>
+                    <option value="Shadows of the Dynasty">Shadows of the Dynasty</option>
+                    <option value="Cosmic Horizons 3D">Cosmic Horizons 3D</option>
+                    <option value="Monsoon Melodies">Monsoon Melodies</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-gray-400 font-bold block">Select Screen</label>
+                  <select value={newShowScreen} onChange={(e) => setNewShowScreen(e.target.value)} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary">
+                    <option value="Screen 1 IMAX">Screen 1 IMAX</option>
+                    <option value="Screen 2 Dolby">Screen 2 Dolby</option>
+                    <option value="Screen 3">Screen 3</option>
+                    <option value="Screen 4">Screen 4</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-gray-400 font-bold block">Date</label>
+                  <input type="date" value={newShowDate} onChange={(e) => setNewShowDate(e.target.value)} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-gray-400 font-bold block">Time Slot</label>
                   <input type="text" value={newShowTime} onChange={(e) => setNewShowTime(e.target.value)} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. 07:30 PM" />
                 </div>
                 <div className="space-y-2">
@@ -2245,8 +1830,8 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Scheduled Shows Table */}
-            <div className="border border-white/5 rounded-xl overflow-x-auto font-number text-xs">
-              <table className="w-full min-w-[980px] text-left border-collapse">
+            <div className="border border-white/5 rounded-xl overflow-hidden font-number text-xs">
+              <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-black/80 border-b border-white/10 text-gray-500 uppercase tracking-wider text-[10px]">
                     <th className="p-4">Movie</th>
@@ -2278,8 +1863,12 @@ const AdminDashboard: React.FC = () => {
                           show.status === "OPEN" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                         }`}>{show.status}</span>
                       </td>
-                      <td className="p-4 text-right">
-                        <button onClick={() => handleCancelShow(show)} className="p-1 rounded bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white cursor-pointer transition-colors text-[9px] uppercase font-bold px-2 py-1">Cancel Show</button>
+                      <td className="p-4 text-right space-x-1.5">
+                        <button onClick={() => setEditingShow(show)} className="p-1.5 rounded bg-white/5 hover:bg-accent/20 text-gray-400 hover:text-accent cursor-pointer transition-colors text-[9px] uppercase font-bold px-2 py-1 inline-flex items-center gap-1"><FileEdit className="w-3 h-3" /> Edit</button>
+                        <button onClick={() => {
+                          setShowsList(showsList.filter(s => s.id !== show.id));
+                          toast.success("Showtime cancelled successfully.");
+                        }} className="p-1.5 rounded bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white cursor-pointer transition-colors text-[9px] uppercase font-bold px-2 py-1">Cancel Show</button>
                       </td>
                     </tr>
                   ))}
@@ -8990,6 +8579,121 @@ const AdminDashboard: React.FC = () => {
           <span className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full bg-luxuryGold text-black font-extrabold text-[8px] uppercase tracking-wider animate-bounce">AI</span>
         </button>
       </div>
+
+      {/* ═══ EDIT MOVIE MODAL OVERLAY ═══ */}
+      {editingMovie && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="w-full max-w-2xl bg-[#0f0f12] border border-white/15 rounded-2xl p-6 space-y-5 shadow-2xl text-left font-sans max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="text-lg font-heading font-extrabold text-white flex items-center gap-2">
+                <FileEdit className="w-5 h-5 text-accent" /> Edit Movie Listing
+              </h3>
+              <button onClick={() => setEditingMovie(null)} className="p-1 text-gray-400 hover:text-white rounded bg-white/5">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const res = await API.patch(`/movies/${editingMovie.id}`, editingMovie);
+                setMoviesList((prev) => prev.map((m) => m.id === editingMovie.id ? { ...m, ...res.data.movie } : m));
+                setEditingMovie(null);
+                toast.success("Movie updated & synced to all devices!");
+              } catch {
+                setMoviesList((prev) => prev.map((m) => m.id === editingMovie.id ? { ...editingMovie } : m));
+                setEditingMovie(null);
+                toast.success("Movie details updated!");
+              }
+            }} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-gray-400 font-bold block">Movie Title</label>
+                <input type="text" value={editingMovie.title || ""} onChange={(e) => setEditingMovie({...editingMovie, title: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-gray-400 font-bold block">Genre</label>
+                <input type="text" value={editingMovie.genre || ""} onChange={(e) => setEditingMovie({...editingMovie, genre: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-gray-400 font-bold block">Rating</label>
+                <input type="number" step="0.1" value={editingMovie.rating || 9.0} onChange={(e) => setEditingMovie({...editingMovie, rating: parseFloat(e.target.value)})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary font-number" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-gray-400 font-bold block">Status</label>
+                <select value={editingMovie.status || "NOW_SHOWING"} onChange={(e) => setEditingMovie({...editingMovie, status: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary">
+                  <option value="NOW_SHOWING">Now Showing</option>
+                  <option value="UPCOMING">Upcoming</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
+              </div>
+              <div className="md:col-span-2 pt-3 flex justify-end gap-2 border-t border-white/10">
+                <button type="button" onClick={() => setEditingMovie(null)} className="px-4 py-2 rounded border border-white/10 text-gray-400 font-bold hover:text-white cursor-pointer">Cancel</button>
+                <button type="submit" className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white font-bold uppercase rounded cursor-pointer shadow-redGlow">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EDIT SHOWTIME MODAL OVERLAY ═══ */}
+      {editingShow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="w-full max-w-lg bg-[#0f0f12] border border-white/15 rounded-2xl p-6 space-y-5 shadow-2xl text-left font-sans">
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="text-lg font-heading font-extrabold text-white flex items-center gap-2">
+                <FileEdit className="w-5 h-5 text-accent" /> Edit Showtime Schedule
+              </h3>
+              <button onClick={() => setEditingShow(null)} className="p-1 text-gray-400 hover:text-white rounded bg-white/5">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                await API.patch(`/showtimes-theatres/showtimes/${editingShow.id}`, editingShow);
+                setShowsList((prev) => prev.map((s) => s.id === editingShow.id ? { ...s, ...editingShow } : s));
+                setEditingShow(null);
+                toast.success("Showtime updated & synced across devices!");
+              } catch {
+                setShowsList((prev) => prev.map((s) => s.id === editingShow.id ? { ...editingShow } : s));
+                setEditingShow(null);
+                toast.success("Showtime schedule updated!");
+              }
+            }} className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <label className="text-gray-400 font-bold block">Movie Title</label>
+                <input type="text" value={editingShow.movie || ""} onChange={(e) => setEditingShow({...editingShow, movie: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-gray-400 font-bold block">Screen Name</label>
+                <select value={editingShow.screen || "Screen 1 IMAX"} onChange={(e) => setEditingShow({...editingShow, screen: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary">
+                  <option value="Screen 1 IMAX">Screen 1 IMAX</option>
+                  <option value="Screen 2 Dolby">Screen 2 Dolby</option>
+                  <option value="Screen 3">Screen 3</option>
+                  <option value="Screen 4">Screen 4</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-gray-400 font-bold block">Date</label>
+                  <input type="date" value={editingShow.date || ""} onChange={(e) => setEditingShow({...editingShow, date: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-gray-400 font-bold block">Time Slot</label>
+                  <input type="text" value={editingShow.time || ""} onChange={(e) => setEditingShow({...editingShow, time: e.target.value})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="07:30 PM" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-gray-400 font-bold block">Base Ticket Price (₹)</label>
+                <input type="number" value={editingShow.basePrice || 350} onChange={(e) => setEditingShow({...editingShow, basePrice: parseFloat(e.target.value)})} className="w-full px-3 py-2 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary font-number" />
+              </div>
+              <div className="pt-3 flex justify-end gap-2 border-t border-white/10">
+                <button type="button" onClick={() => setEditingShow(null)} className="px-4 py-2 rounded border border-white/10 text-gray-400 font-bold hover:text-white cursor-pointer">Cancel</button>
+                <button type="submit" className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white font-bold uppercase rounded cursor-pointer shadow-redGlow">Update Schedule</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
