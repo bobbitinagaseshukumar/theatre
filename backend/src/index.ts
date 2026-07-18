@@ -25,7 +25,9 @@ app.use(
 // Supports a comma-separated FRONTEND_URL for multiple domains (e.g. preview + prod).
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:3000",
+  "https://showtime-beryl.vercel.app",
   ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()) : []),
 ];
 
@@ -36,7 +38,8 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
       try {
         const hostname = new URL(origin).hostname;
-        if (process.env.ALLOW_VERCEL_PREVIEWS === "true" && /\.vercel\.app$/.test(hostname)) {
+        // Always allow any *.vercel.app preview/production deploys
+        if (/\.vercel\.app$/.test(hostname)) {
           return callback(null, true);
         }
       } catch {
