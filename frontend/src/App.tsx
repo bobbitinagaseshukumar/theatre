@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 import { I18nProvider } from "./i18n/I18nProvider";
 
 // Lazy load pages for performance (Lighthouse optimization)
@@ -30,6 +31,7 @@ const App: React.FC = () => {
   return (
     <I18nProvider>
     <Router>
+      <ScrollToTop />
       <div className="flex flex-col min-h-screen bg-background text-white">
         <Navbar />
         
