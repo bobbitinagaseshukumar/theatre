@@ -17,8 +17,11 @@ services:
     startCommand: npx prisma db push --skip-generate && node dist/index.js
     healthCheckPath: /health
     envVars:
-      # Set to your Supabase Postgres URI in the Render dashboard (Environment tab)
+      # Supabase pooled URI (port 6543, ?pgbouncer=true) — set in Render dashboard
       - key: DATABASE_URL
+        sync: false
+      # Supabase direct/session URI (port 5432) — for prisma db push/migrations
+      - key: DIRECT_URL
         sync: false
       - key: JWT_SECRET
         generateValue: true
