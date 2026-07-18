@@ -35,9 +35,9 @@ router.get("/:id", async (req: Request, res: Response) => {
       return;
     }
     res.status(200).json(movie);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Movie query error:", error);
-    res.status(500).json({ message: "Database query failed.", error: error?.message, code: error?.code });
+    res.status(500).json({ message: "Database query failed." });
   }
 });
 
