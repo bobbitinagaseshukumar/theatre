@@ -13,8 +13,9 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npm run build
-    # `db push` syncs the Prisma schema to the DB on each deploy (no migration files yet)
-    startCommand: npx prisma db push --skip-generate && node dist/index.js
+    # `db push` syncs the Prisma schema to the DB, then `seed` loads sample data
+    # (seed is idempotent — safe to run on every deploy), then the server starts.
+    startCommand: npx prisma db push --skip-generate && node dist/seed.js && node dist/index.js
     healthCheckPath: /health
     envVars:
       # Supabase pooled URI (port 6543, ?pgbouncer=true) — set in Render dashboard
