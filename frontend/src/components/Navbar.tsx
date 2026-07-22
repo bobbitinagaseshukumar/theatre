@@ -220,6 +220,11 @@ const Navbar: React.FC = () => {
       </div>
       {mobileOpen && (
         <div className="fixed inset-x-0 top-[76px] sm:top-[90px] bottom-0 bg-[#0a0a0d] border-t border-white/10 z-[999] px-4 sm:px-6 py-6 sm:py-8 overflow-y-auto space-y-6 flex flex-col justify-start">
+          {/* Mobile Search Bar */}
+          <div className="w-full">
+            <SearchBar />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             {menuItems.map((item) => {
               const active = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));

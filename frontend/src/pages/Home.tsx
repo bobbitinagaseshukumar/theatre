@@ -128,9 +128,9 @@ const Home: React.FC = () => {
   const handleBookNowClick = (movieId: string) => {
     if (!user) {
       toast.error("Please login to book tickets.");
-      navigate(`/login?redirect=${encodeURIComponent(`/movies/${movieId}`)}`);
+      navigate(`/login?redirect=${encodeURIComponent(`/showtimes/${movieId}`)}`);
     } else {
-      navigate(`/movies/${movieId}`);
+      navigate(`/showtimes/${movieId}`);
     }
   };
 

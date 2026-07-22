@@ -141,12 +141,9 @@ const Booking: React.FC = () => {
     }
   }, [movie, showtime, navigate]);
 
-  // Intro timer
+  // Intro timer set to 0 for instant interactive rendering
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIntroActive(false);
-    }, 1600);
-    return () => clearTimeout(timer);
+    setIntroActive(false);
   }, []);
 
   // Monitor online status to pause reservation timeout
@@ -297,8 +294,8 @@ const Booking: React.FC = () => {
     }
   };
 
-  // Seat toggle selection dispatch
-  const handleSeatClick = async (seat: any) => {
+  // Seat toggle selection dispatch - INSTANT response
+  const handleSeatClick = (seat: any) => {
     if (seat.type === "BOOKED" || seat.type === "BLOCKED" || liveBlockedSeats.includes(seat.id)) {
       toast.error(`Seat ${seat.seatNumber} is unavailable.`);
       return;
@@ -310,51 +307,33 @@ const Booking: React.FC = () => {
       return;
     }
 
-    // If removing the seat, just dispatch directly
-    if (isAlreadySelected) {
-      dispatch(toggleSeatSelection({
-        id: seat.id,
-        seatNumber: seat.seatNumber,
-        type: seat.type,
-        price: seat.price
-      }));
-      return;
-    }
+    // Toggle seat state IMMEDIATELY for zero lag / 0ms visual feedback
+    dispatch(toggleSeatSelection({
+      id: seat.id,
+      seatNumber: seat.seatNumber,
+      type: seat.type,
+      price: seat.price
+    }));
 
-    // Call validation for isolated seat prevention
-    try {
+    // Asynchronous background check for isolated seat warnings without delaying UI
+    if (!isAlreadySelected) {
       const selectedIds = [...selectedSeats.map((s) => s.id), seat.id];
       const bookedIds = [...liveBlockedSeats, ...seatLayout.filter((s) => s.type === "BOOKED").map((s) => s.id)];
       const blockedIds = seatLayout.filter((s) => s.type === "BLOCKED").map((s) => s.id);
 
-      const valRes = await API.post("/booking-engine/validate-selection", {
+      API.post("/booking-engine/validate-selection", {
         selectedSeats: selectedIds,
         bookedSeats: bookedIds,
         blockedSeats: blockedIds
+      }).then((valRes) => {
+        if (valRes.data && !valRes.data.valid) {
+          setPendingSelection(seat);
+          setPendingIsolatedSeat(seatLayout.find((s) => s.id === valRes.data.isolatedSeatId));
+          setIsolatedWarning(valRes.data.warning);
+        }
+      }).catch(() => {
+        // Ignore validation error gracefully
       });
-
-      if (valRes.data && !valRes.data.valid) {
-        // Warning: creates isolated seat. Open Modal
-        setPendingSelection(seat);
-        setPendingIsolatedSeat(seatLayout.find((s) => s.id === valRes.data.isolatedSeatId));
-        setIsolatedWarning(valRes.data.warning);
-      } else {
-        // Proceed directly
-        dispatch(toggleSeatSelection({
-          id: seat.id,
-          seatNumber: seat.seatNumber,
-          type: seat.type,
-          price: seat.price
-        }));
-      }
-    } catch {
-      // Fallback direct select
-      dispatch(toggleSeatSelection({
-        id: seat.id,
-        seatNumber: seat.seatNumber,
-        type: seat.type,
-        price: seat.price
-      }));
     }
   };
 

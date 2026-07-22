@@ -108,8 +108,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
           <div className="absolute inset-x-0 bottom-0 translate-y-full p-3 transition-transform duration-300 group-hover:translate-y-0">
             <div className="flex gap-2">
               <button
-                onClick={() => navigate(`/movies/${movie.id}`)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-gold to-gold-premium py-2 text-xs font-bold text-black shadow-goldGlow"
+                onClick={() => navigate(isUpcoming ? `/movies/${movie.id}` : `/showtimes/${movie.id}`)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-gold to-gold-premium py-2 text-xs font-bold text-black shadow-goldGlow cursor-pointer"
               >
                 <Ticket className="h-3.5 w-3.5" />
                 {isUpcoming ? "Details" : "Book Now"}

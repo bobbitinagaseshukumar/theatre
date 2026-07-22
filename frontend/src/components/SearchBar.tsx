@@ -80,8 +80,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
   };
 
   return (
-    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-full max-w-[420px] h-12">
-      <div className="relative w-full h-full group">
+    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-full max-w-[420px] h-10 sm:h-11">
+      <div className="relative flex items-center w-full h-full group">
         {/* Search Input Box */}
         <input
           type="text"
@@ -92,17 +92,21 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
           placeholder="Search Movies..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full h-full pl-12 pr-4 rounded-full bg-white/5 hover:bg-white/10 focus:bg-black/60 border border-white/10 focus:border-accent text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-accent/40 text-sm transition-all duration-300"
+          className="w-full h-full pl-4 pr-12 rounded-full bg-white/5 hover:bg-white/10 focus:bg-black/80 border border-white/10 focus:border-primary text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50 text-xs sm:text-sm transition-all duration-300"
         />
 
-        {/* Search Icon with rotation anim on hover */}
-        <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-500 group-hover:text-white transition-colors duration-300">
+        {/* Interactive Search Action Button */}
+        <button
+          type="submit"
+          aria-label="Submit search"
+          className="absolute right-1 sm:right-1.5 inset-y-1 sm:inset-y-1 w-8 sm:w-9 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
+        >
           {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-accent" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Search className="w-5 h-5 transition-transform duration-500 group-hover:rotate-12" />
+            <Search className="w-4 h-4" />
           )}
-        </span>
+        </button>
       </div>
 
       {/* Autocomplete Dropdown List */}
