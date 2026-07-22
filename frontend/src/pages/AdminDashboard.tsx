@@ -163,11 +163,34 @@ const AdminDashboard: React.FC = () => {
   };
 
   // ─── Movie management ───
-  const [moviesList, setMoviesList] = useState<any[]>([
-    { id: "m-1", title: "Aether: Rising Stars", genre: "Sci-Fi", status: "NOW_SHOWING", rating: 9.2 },
-    { id: "m-2", title: "Shadows of the Dynasty", genre: "Action", status: "NOW_SHOWING", rating: 8.8 },
-    { id: "m-3", title: "Chronicles of Whispering Woods", genre: "Fantasy", status: "UPCOMING", rating: 9.5 }
-  ]);
+  const [moviesList, setMoviesList] = useState<any[]>([]);
+
+  // ─── Fetch movies from database ───
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const res = await API.get("/movies");
+        if (res.data && Array.isArray(res.data)) {
+          setMoviesList(res.data.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            genre: Array.isArray(m.genre) ? m.genre.join(", ") : m.genre || "",
+            status: m.status || "NOW_SHOWING",
+            rating: m.rating || 0,
+            posterUrl: m.posterUrl || "",
+            trailerUrl: m.trailerUrl || "",
+            duration: m.duration || 0,
+            description: m.description || "",
+            releaseDate: m.releaseDate || "",
+            language: Array.isArray(m.language) ? m.language.join(", ") : m.language || ""
+          })));
+        }
+      } catch (err) {
+        console.error("Failed to fetch movies:", err);
+      }
+    };
+    fetchMovies();
+  }, []);
   const [editingMovie, setEditingMovie] = useState<any | null>(null);
   const [editingShow, setEditingShow] = useState<any | null>(null);
   // ═══════════════════════════════════════════════════════════════
@@ -1578,7 +1601,7 @@ const AdminDashboard: React.FC = () => {
   // ═══════════════════════════════════════════════════════════════
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex flex-col lg:flex-row gap-8 items-start text-left relative z-10 font-sans">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8 lg:py-12 pt-24 sm:pt-28 flex flex-col lg:flex-row gap-8 items-start text-left relative z-10 font-sans">
 
       {/* Decorative backdrop */}
       <div className="absolute inset-0 pointer-events-none z-0">
@@ -1586,7 +1609,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* ═══ Side Navigation ═══ */}
-      <div className="w-full lg:w-64 flex flex-row lg:flex-col gap-2 shrink-0 bg-black/40 border border-white/10 p-2 rounded-xl overflow-x-auto lg:overflow-x-visible z-10 font-heading">
+      <div className="w-full lg:w-56 xl:w-64 flex flex-row lg:flex-col gap-1 sm:gap-2 shrink-0 bg-black/60 border border-white/10 p-1.5 sm:p-2 rounded-xl overflow-x-auto lg:overflow-x-visible scrollbar-hide z-10 font-heading">
         <TabBtn tab="stats" icon={<LayoutDashboard className="w-4 h-4" />} label="Analytics" />
         <TabBtn tab="movies" icon={<Film className="w-4 h-4" />} label="Movies" />
         <TabBtn tab="shows" icon={<CalendarDays className="w-4 h-4" />} label="Shows" />
@@ -1614,7 +1637,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* ═══ Main Content Area ═══ */}
-      <div className="flex-1 w-full bg-white/5 backdrop-blur-[20px] border border-white/10 rounded-2xl p-8 min-h-[550px] z-10">
+      <div className="flex-1 w-full bg-white/5 backdrop-blur-[20px] border border-white/10 rounded-xl sm:rounded-2xl p-3 sm:p-5 lg:p-8 min-h-[400px] sm:min-h-[550px] overflow-x-hidden z-10">
 
         {/* ═══════════════════════════════════════════════════════
            TAB 1 — LIVE ANALYTICS & DIAGNOSTICS
@@ -1628,12 +1651,12 @@ const AdminDashboard: React.FC = () => {
             {/* Enterprise executive overview: real-time KPIs, live map, AI assistant */}
             <ExecutiveOverview />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-number">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-number">
               {[
-                { label: "Today's Revenue", value: "₹1,42,850", color: "text-white" },
-                { label: "Total Bookings", value: "348 Tickets", color: "text-accent" },
-                { label: "Average Rating", value: "⭐ 4.8 / 5.0", color: "text-white" },
-                { label: "F&B Cart Conversions", value: "62%", color: "text-luxuryGold" }
+                { label: "Today's Revenue", value: "₹0", color: "text-white" },
+                { label: "Total Bookings", value: "0 Tickets", color: "text-accent" },
+                { label: "Average Rating", value: "⭐ 0.0 / 5.0", color: "text-white" },
+                { label: "F&B Cart Conversions", value: "0%", color: "text-luxuryGold" }
               ].map((card, i) => (
                 <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-primary/30 transition-all">
                   <span className="text-[10px] text-gray-500 uppercase font-semibold block">{card.label}</span>

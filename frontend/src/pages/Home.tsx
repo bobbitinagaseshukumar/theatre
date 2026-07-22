@@ -182,7 +182,7 @@ const Home: React.FC = () => {
 
               {/* Slider Content Frame */}
               <div className="absolute inset-0 flex items-center">
-                <div className="max-w-[1600px] w-full mx-auto px-10 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
+                <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-10 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
                   
                   {/* Left Column: Movie Texts */}
                   <div className="lg:col-span-3 space-y-6 text-left">
@@ -318,7 +318,7 @@ const Home: React.FC = () => {
       )}
 
       {/* Visual Category Quick-Links Menu */}
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-10 py-6 -mt-8 relative z-20">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 -mt-8 relative z-20">
         <div className="p-4 rounded-2xl bg-black/60 border border-white/5 backdrop-blur-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-col text-left">
             <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest">Quick Navigation</span>
@@ -357,7 +357,7 @@ const Home: React.FC = () => {
       <QuickStats />
 
       {/* 2. FEATURED MOVIES / NOW SHOWING (Horizontal Carousel) */}
-      <div id="featured-movies" className="max-w-[1600px] mx-auto px-10 space-y-16">
+      <div id="featured-movies" className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 space-y-16">
         <div>
           <span className="text-xs uppercase font-extrabold tracking-widest text-primary glow-text-red font-number">
             Now Showing
