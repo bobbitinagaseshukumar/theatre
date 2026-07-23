@@ -158,7 +158,7 @@ const Navbar: React.FC = () => {
           </button>
 
           {/* Autocomplete Search Bar for Desktop */}
-          <div className="hidden md:block shrink-0">
+          <div className="hidden md:block shrink-0 ml-3 lg:ml-6">
             <SearchBar />
           </div>
 

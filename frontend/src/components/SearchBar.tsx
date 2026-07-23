@@ -81,7 +81,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
 
   return (
     <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-[160px] md:w-[180px] lg:w-[240px] xl:w-[300px] h-9 select-none shrink-0">
-      <div className="relative flex items-center w-full h-full group">
+      <div className="relative flex items-center w-full h-full rounded-full bg-white/5 hover:bg-white/10 focus-within:bg-black/90 border border-white/10 focus-within:border-primary transition-all duration-300 overflow-hidden pl-3.5 pr-1 shadow-inner">
         {/* Search Input Box */}
         <input
           type="text"
@@ -92,14 +92,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
           placeholder="Search Movies..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full h-full pl-3.5 pr-10 rounded-full bg-white/5 hover:bg-white/10 focus:bg-black/90 border border-white/10 focus:border-primary text-white placeholder-gray-400 focus:outline-none text-xs transition-all duration-300"
+          className="w-full h-full bg-transparent text-white placeholder-gray-400 focus:outline-none text-xs"
         />
 
         {/* Interactive Search Action Button */}
         <button
           type="submit"
           aria-label="Submit search"
-          className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
+          className="w-7 h-7 shrink-0 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
         >
           {loading ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
