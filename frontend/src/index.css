@@ -29,6 +29,29 @@
     }
   }
 
+  /* Prevent stray text highlighting on interactive UI chrome (buttons, nav,
+     headings, labels, icons) so double-clicks don't leave stuck selections.
+     Real content and form fields stay fully selectable. */
+  button,
+  a,
+  nav,
+  label,
+  svg,
+  .select-none,
+  [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  p,
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
   img,
   video,
   canvas,
