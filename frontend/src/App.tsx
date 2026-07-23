@@ -45,7 +45,7 @@ const App: React.FC = () => {
         <Navbar />
         
         {/* Main Content Area */}
-        <main id="main-content" className="flex-grow pt-20" tabIndex={-1}>
+        <main id="main-content" className="flex-grow pt-[76px] sm:pt-[90px]" tabIndex={-1}>
           <Suspense 
             fallback={
               <div className="min-h-[70vh] flex items-center justify-center">

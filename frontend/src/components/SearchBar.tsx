@@ -80,7 +80,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
   };
 
   return (
-    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-[160px] md:w-[180px] lg:w-[240px] xl:w-[300px] h-9 select-none shrink-0">
+    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-[140px] md:w-[160px] lg:w-[200px] xl:w-[260px] h-9 select-none shrink-0">
       <div className="relative flex items-center w-full h-full rounded-full bg-white/5 hover:bg-white/10 focus-within:bg-black/90 border border-white/10 focus-within:border-primary transition-all duration-300 overflow-hidden pl-3.5 pr-1 shadow-inner">
         {/* Search Input Box */}
         <input

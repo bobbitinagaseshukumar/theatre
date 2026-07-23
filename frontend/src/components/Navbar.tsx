@@ -127,7 +127,7 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* RIGHT: Search & User Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 lg:gap-4">
           
           {/* Mobile Search Toggle Icon */}
           <button
@@ -140,14 +140,12 @@ const Navbar: React.FC = () => {
           </button>
 
           {/* Autocomplete Search Bar for Desktop */}
-          <div className="hidden md:block shrink-0 ml-3 lg:ml-6">
+          <div className="hidden md:block shrink-0 ml-2 lg:ml-4">
             <SearchBar />
           </div>
 
           {/* Language Switcher */}
           <LanguageSwitcher />
-
-
 
           {/* User Profile dropdown */}
           {user ? (
@@ -204,7 +202,7 @@ const Navbar: React.FC = () => {
           ) : (
             <Link
               to="/login"
-              className="px-3.5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-primary hover:bg-primary-hover text-white font-bold text-xs sm:text-sm tracking-wide shadow-redGlow hover:scale-105 transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap z-20"
+              className="px-4 py-2 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 text-white font-heading font-extrabold text-xs sm:text-sm tracking-wider shadow-redGlow transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap z-20"
             >
               <User className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span>Sign In</span>
