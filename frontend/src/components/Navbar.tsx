@@ -246,14 +246,16 @@ const Navbar: React.FC = () => {
       {/* Mobile Search Dropdown Bar */}
       {mobileSearchOpen && (
         <div className="md:hidden absolute left-0 right-0 top-[76px] bg-[#0a0a0d] border-b border-white/10 p-3 z-50 shadow-2xl">
-          <SearchBar />
+          <div className="[&_form]:!w-full">
+            <SearchBar />
+          </div>
         </div>
       )}
 
       {mobileOpen && (
         <div className="fixed inset-x-0 top-[76px] sm:top-[90px] bottom-0 bg-[#0a0a0d] border-t border-white/10 z-[999] px-4 sm:px-6 py-6 sm:py-8 overflow-y-auto space-y-6 flex flex-col justify-start">
           {/* Mobile Search Bar */}
-          <div className="w-full">
+          <div className="w-full [&_form]:!w-full">
             <SearchBar />
           </div>
 

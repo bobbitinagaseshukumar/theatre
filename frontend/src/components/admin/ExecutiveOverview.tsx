@@ -29,18 +29,18 @@ interface Kpi {
 }
 
 const KPIS: Kpi[] = [
-  { icon: <IndianRupee className="h-4 w-4" />, label: "Today's Revenue", value: 1428500, prefix: "₹", live: true, color: "text-white" },
-  { icon: <Ticket className="h-4 w-4" />, label: "Today's Bookings", value: 3480, live: true, color: "text-accent" },
-  { icon: <Users className="h-4 w-4" />, label: "Active Users", value: 1265, live: true, color: "text-emerald-400" },
-  { icon: <Film className="h-4 w-4" />, label: "Movies Running", value: 48, color: "text-white" },
-  { icon: <Armchair className="h-4 w-4" />, label: "Occupancy Rate", value: 76, suffix: "%", color: "text-luxuryGold" },
-  { icon: <Popcorn className="h-4 w-4" />, label: "Food Revenue", value: 284000, prefix: "₹", color: "text-white" },
-  { icon: <Receipt className="h-4 w-4" />, label: "Avg Ticket Value", value: 410, prefix: "₹", color: "text-accent" },
-  { icon: <RotateCcw className="h-4 w-4" />, label: "Refund Rate", value: 1.8, suffix: "%", decimals: 1, color: "text-white" },
-  { icon: <LifeBuoy className="h-4 w-4" />, label: "Open Tickets", value: 23, color: "text-amber-400" },
-  { icon: <ServerCog className="h-4 w-4" />, label: "Server Health", value: 99.9, suffix: "%", decimals: 1, color: "text-emerald-400" },
-  { icon: <CreditCard className="h-4 w-4" />, label: "Payment Success", value: 98.4, suffix: "%", decimals: 1, color: "text-white" },
-  { icon: <Brain className="h-4 w-4" />, label: "AI Business Score", value: 92, suffix: "/100", color: "text-luxuryGold" },
+  { icon: <IndianRupee className="h-4 w-4" />, label: "Today's Revenue", value: 0, prefix: "₹", live: true, color: "text-white" },
+  { icon: <Ticket className="h-4 w-4" />, label: "Today's Bookings", value: 0, live: true, color: "text-accent" },
+  { icon: <Users className="h-4 w-4" />, label: "Active Users", value: 0, live: true, color: "text-emerald-400" },
+  { icon: <Film className="h-4 w-4" />, label: "Movies Running", value: 0, color: "text-white" },
+  { icon: <Armchair className="h-4 w-4" />, label: "Occupancy Rate", value: 0, suffix: "%", color: "text-luxuryGold" },
+  { icon: <Popcorn className="h-4 w-4" />, label: "Food Revenue", value: 0, prefix: "₹", color: "text-white" },
+  { icon: <Receipt className="h-4 w-4" />, label: "Avg Ticket Value", value: 0, prefix: "₹", color: "text-accent" },
+  { icon: <RotateCcw className="h-4 w-4" />, label: "Refund Rate", value: 0, suffix: "%", decimals: 1, color: "text-white" },
+  { icon: <LifeBuoy className="h-4 w-4" />, label: "Open Tickets", value: 0, color: "text-amber-400" },
+  { icon: <ServerCog className="h-4 w-4" />, label: "Server Health", value: 0, suffix: "%", decimals: 1, color: "text-emerald-400" },
+  { icon: <CreditCard className="h-4 w-4" />, label: "Payment Success", value: 0, suffix: "%", decimals: 1, color: "text-white" },
+  { icon: <Brain className="h-4 w-4" />, label: "AI Business Score", value: 0, suffix: "/100", color: "text-luxuryGold" },
 ];
 
 const REGIONS = [
@@ -166,7 +166,7 @@ const ExecutiveOverview: React.FC = () => {
               </div>
             ))}
             <div className="absolute bottom-3 left-3 rounded-lg bg-black/60 px-3 py-1.5 text-[10px] text-gray-400 backdrop-blur">
-              {REGIONS.length} active regions · 1,265 online customers
+              {REGIONS.length} active regions · 0 online customers
             </div>
           </div>
         </div>
@@ -178,9 +178,9 @@ const ExecutiveOverview: React.FC = () => {
           </h3>
           <div className="space-y-3">
             {[
-              "Increase evening ticket price by 8% for 'Aether' to maximize revenue without reducing occupancy.",
-              "Weekend revenue forecast: ₹6.4L (+12% WoW). Add 2 shows on Screen 1.",
-              "Churn risk rising for 3 VIP customers — trigger retention coupons.",
+              "No revenue data yet. Add movies and showtimes to start generating insights.",
+              "Configure your theatre screens and pricing to enable AI forecasting.",
+              "Connect customer data sources to unlock churn prediction and retention tools.",
             ].map((tip, i) => (
               <motion.div
                 key={i}

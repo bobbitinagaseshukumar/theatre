@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ExecutiveOverview from "../components/admin/ExecutiveOverview";
-import MovieCmsPanel from "../components/admin/MovieCmsPanel";
 import ShowCalendar from "../components/admin/ShowCalendar";
 import BookingLifecyclePanel from "../components/admin/BookingLifecyclePanel";
 import PaymentGatewayPanel from "../components/admin/PaymentGatewayPanel";
@@ -973,7 +972,7 @@ const AdminDashboard: React.FC = () => {
     if (!aiAnalystQuestion.trim()) return;
     const q = aiAnalystQuestion.toLowerCase();
     if (q.includes("revenue")) {
-      setAiAnalystResponse("Revenue today is at ₹1,42,850 (+12.4% vs yesterday) driven by high occupancy on evening shows of 'Aether: Rising Stars'.");
+      setAiAnalystResponse("No revenue data available yet. Add movies and configure showtimes to generate AI insights.");
       setAiAnalystImpact("+5.2% margins increase");
     } else if (q.includes("food") || q.includes("popcorn")) {
       setAiAnalystResponse("Truffle Butter Popcorn accounts for 42% of F&B profit margins today. Concession attachment rate is currently sitting at 23.3%.");
@@ -1437,15 +1436,12 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteMovie = async (id: string, title: string) => {
-    try {
-      await API.delete(`/movies/${id}`);
-      setMoviesList((prev) => prev.filter((m) => m.id !== id));
-      toast.success(`Removed movie: ${title}`);
-    } catch (err: any) {
-      setMoviesList((prev) => prev.filter((m) => m.id !== id));
-      toast.success(`Removed movie: ${title}`);
-    }
+  const handleDeleteMovie = (id: string, title: string) => {
+    // Optimistic instant UI removal — no waiting for network
+    setMoviesList((prev) => prev.filter((m) => m.id !== id));
+    toast.success(`Removed movie: ${title}`);
+    // Fire-and-forget backend deletion
+    API.delete(`/movies/${id}`).catch(() => {});
   };
 
   const handleAddFood = (e: React.FormEvent) => {
@@ -1752,8 +1748,7 @@ const AdminDashboard: React.FC = () => {
         ═══════════════════════════════════════════════════════ */}
         {activeTab === "movies" && (
           <div className="space-y-8">
-            {/* Volume 8 · Part 1 — Media Library + AI processing + approval workflow */}
-            <MovieCmsPanel />
+
             <div className="flex justify-between items-center border-b border-white/5 pb-4">
               <h2 className="text-2xl font-heading font-extrabold tracking-tight">Manage Movie Listings</h2>
               {!wizardOpen && (
@@ -2259,7 +2254,7 @@ const AdminDashboard: React.FC = () => {
                 { label: "Total Customers", value: "12,847", icon: <Users className="w-4 h-4" />, color: "text-white" },
                 { label: "Active Today", value: "342", icon: <Eye className="w-4 h-4" />, color: "text-emerald-400" },
                 { label: "VIP Customers", value: "89", icon: <Star className="w-4 h-4" />, color: "text-luxuryGold" },
-                { label: "Avg Lifetime Spend", value: "₹2,840", icon: <TrendingUp className="w-4 h-4" />, color: "text-accent" },
+                { label: "Avg Lifetime Spend", value: "₹0", icon: <TrendingUp className="w-4 h-4" />, color: "text-accent" },
                 { label: "Open Tickets", value: "12", icon: <MessageSquare className="w-4 h-4" />, color: "text-amber-400" },
                 { label: "Satisfaction Score", value: "4.6 / 5.0", icon: <Star className="w-4 h-4" />, color: "text-emerald-400" },
                 { label: "Retention Rate", value: "78.5%", icon: <TrendingUp className="w-4 h-4" />, color: "text-blue-400" },
@@ -2571,9 +2566,9 @@ const AdminDashboard: React.FC = () => {
             {/* F&B Analytics Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-number">
               {[
-                { label: "Today's F&B Revenue", value: "₹48,650", icon: <DollarSign className="w-4 h-4" />, color: "text-emerald-400" },
+                { label: "Today's F&B Revenue", value: "₹0", icon: <DollarSign className="w-4 h-4" />, color: "text-emerald-400" },
                 { label: "Total Orders", value: "127", icon: <Package className="w-4 h-4" />, color: "text-white" },
-                { label: "Avg Order Value", value: "₹383", icon: <TrendingUp className="w-4 h-4" />, color: "text-accent" },
+                { label: "Avg Order Value", value: "₹0", icon: <TrendingUp className="w-4 h-4" />, color: "text-accent" },
                 { label: "Kitchen Queue", value: "12 Active", icon: <Clock className="w-4 h-4" />, color: "text-amber-400" },
                 { label: "Preparing", value: "8", icon: <UtensilsCrossed className="w-4 h-4" />, color: "text-blue-400" },
                 { label: "Delivered", value: "112", icon: <Truck className="w-4 h-4" />, color: "text-emerald-400" },
@@ -2832,7 +2827,7 @@ const AdminDashboard: React.FC = () => {
                 { label: "On Leave", value: "5", icon: <CalendarDays className="w-4 h-4" />, color: "text-blue-400" },
                 { label: "Morning Shift", value: "32", icon: <Zap className="w-4 h-4" />, color: "text-luxuryGold" },
                 { label: "Overtime Hours", value: "48h", icon: <Clock className="w-4 h-4" />, color: "text-purple-400" },
-                { label: "Payroll This Month", value: "₹18.4L", icon: <Wallet className="w-4 h-4" />, color: "text-emerald-400" },
+                { label: "Payroll This Month", value: "₹0", icon: <Wallet className="w-4 h-4" />, color: "text-emerald-400" },
                 { label: "Pending Salaries", value: "15", icon: <DollarSign className="w-4 h-4" />, color: "text-amber-400" },
                 { label: "Avg Performance", value: "4.2 / 5", icon: <Star className="w-4 h-4" />, color: "text-luxuryGold" },
                 { label: "Training Done", value: "78%", icon: <Award className="w-4 h-4" />, color: "text-blue-400" },
@@ -3155,7 +3150,7 @@ const AdminDashboard: React.FC = () => {
                   {/* Left Side: Payroll Table (Column 7) */}
                   <div className="lg:col-span-7 space-y-4">
                     <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                      <span className="text-xs text-gray-500">Disbursed for July 2026: <strong className="text-emerald-400 font-number">₹18,42,000</strong></span>
+                      <span className="text-xs text-gray-500">Disbursed: <strong className="text-emerald-400 font-number">₹0</strong></span>
                       <span className="text-[10px] text-gray-500 font-bold uppercase">Pending: 15 staff members</span>
                     </div>
                     
@@ -3547,18 +3542,18 @@ const AdminDashboard: React.FC = () => {
             {/* Marketing KPIs */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-number">
               {[
-                { label: "Campaign Revenue", value: "₹2.84L", icon: <TrendingUp className="w-4 h-4" />, color: "text-emerald-400" },
+                { label: "Campaign Revenue", value: "₹0", icon: <TrendingUp className="w-4 h-4" />, color: "text-emerald-400" },
                 { label: "Campaign ROI", value: "340%", icon: <BarChart3 className="w-4 h-4" />, color: "text-luxuryGold" },
                 { label: "Coupons Redeemed", value: "1,247", icon: <Ticket className="w-4 h-4" />, color: "text-blue-400" },
                 { label: "Active Memberships", value: "1,047", icon: <Crown className="w-4 h-4" />, color: "text-purple-400" },
-                { label: "Membership Revenue", value: "₹4.28L", icon: <Wallet className="w-4 h-4" />, color: "text-emerald-400" },
-                { label: "Referral Revenue", value: "₹67.8K", icon: <Share2 className="w-4 h-4" />, color: "text-blue-400" },
+                { label: "Membership Revenue", value: "₹0", icon: <Wallet className="w-4 h-4" />, color: "text-emerald-400" },
+                { label: "Referral Revenue", value: "₹0", icon: <Share2 className="w-4 h-4" />, color: "text-blue-400" },
                 { label: "Points Issued", value: "1.84L", icon: <Star className="w-4 h-4" />, color: "text-luxuryGold" },
                 { label: "Customer Retention", value: "78.5%", icon: <Repeat className="w-4 h-4" />, color: "text-emerald-400" },
                 { label: "Email Open Rate", value: "42.3%", icon: <Mail className="w-4 h-4" />, color: "text-blue-400" },
                 { label: "Push CTR", value: "8.5%", icon: <Bell className="w-4 h-4" />, color: "text-purple-400" },
                 { label: "Conversion Rate", value: "4.8%", icon: <Target className="w-4 h-4" />, color: "text-emerald-400" },
-                { label: "Customer LTV", value: "₹2,840", icon: <Trophy className="w-4 h-4" />, color: "text-luxuryGold" }
+                { label: "Customer LTV", value: "₹0", icon: <Trophy className="w-4 h-4" />, color: "text-luxuryGold" }
               ].map((card, i) => (
                 <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-primary/30 transition-all group">
                   <span className="text-[10px] text-gray-500 uppercase font-semibold flex items-center gap-1">{card.icon} {card.label}</span>
@@ -3710,8 +3705,8 @@ const AdminDashboard: React.FC = () => {
                   {[
                     { label: "Total Referrals", value: "342", color: "text-white" },
                     { label: "Converted", value: "218 (63.7%)", color: "text-emerald-400" },
-                    { label: "Referrer Reward", value: "₹200 / referral", color: "text-luxuryGold" },
-                    { label: "Total Rewards Paid", value: "₹67,800", color: "text-blue-400" }
+                    { label: "Referrer Reward", value: "₹0 / referral", color: "text-luxuryGold" },
+                    { label: "Total Rewards Paid", value: "₹0", color: "text-blue-400" }
                   ].map((c, i) => (
                     <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-xl">
                       <span className="text-[10px] text-gray-500 uppercase font-semibold block">{c.label}</span>
@@ -4000,14 +3995,14 @@ const AdminDashboard: React.FC = () => {
             {/* Financial KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-number">
               {[
-                { label: "Today's Revenue", value: "₹1,42,850", icon: <TrendingUp className="w-4 h-4" />, color: "text-emerald-400" },
-                { label: "Net Profit (margin 24%)", value: "₹12,84,500", icon: <Activity className="w-4 h-4" />, color: "text-luxuryGold" },
-                { label: "Gross Profit (margin 47%)", value: "₹25,41,760", icon: <BarChart3 className="w-4 h-4" />, color: "text-white" },
-                { label: "Operating Expenses", value: "₹12,57,260", icon: <TrendingDown className="w-4 h-4" />, color: "text-red-400" },
-                { label: "Taxes Collected (GST)", value: "₹4,85,400", icon: <FileText className="w-4 h-4" />, color: "text-purple-400" },
-                { label: "Pending settlements", value: "₹1,20,000", icon: <Clock className="w-4 h-4" />, color: "text-amber-400" },
-                { label: "Avg Customer Spend", value: "₹626", icon: <Users className="w-4 h-4" />, color: "text-blue-400" },
-                { label: "Business Health Score", value: "94 / 100", icon: <ShieldCheck className="w-4 h-4" />, color: "text-emerald-400" }
+                { label: "Today's Revenue", value: "₹0", icon: <TrendingUp className="w-4 h-4" />, color: "text-emerald-400" },
+                { label: "Net Profit", value: "₹0", icon: <Activity className="w-4 h-4" />, color: "text-luxuryGold" },
+                { label: "Gross Profit", value: "₹0", icon: <BarChart3 className="w-4 h-4" />, color: "text-white" },
+                { label: "Operating Expenses", value: "₹0", icon: <TrendingDown className="w-4 h-4" />, color: "text-red-400" },
+                { label: "Taxes Collected (GST)", value: "₹0", icon: <FileText className="w-4 h-4" />, color: "text-purple-400" },
+                { label: "Pending settlements", value: "₹0", icon: <Clock className="w-4 h-4" />, color: "text-amber-400" },
+                { label: "Avg Customer Spend", value: "₹0", icon: <Users className="w-4 h-4" />, color: "text-blue-400" },
+                { label: "Business Health Score", value: "0 / 100", icon: <ShieldCheck className="w-4 h-4" />, color: "text-emerald-400" }
               ].map((card, i) => (
                 <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-primary/30 transition-all group">
                   <span className="text-[10px] text-gray-500 uppercase font-semibold flex items-center gap-1">{card.icon} {card.label}</span>
