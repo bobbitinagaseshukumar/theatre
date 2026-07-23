@@ -75,15 +75,7 @@ const format = (n: number, decimals = 0) =>
 
 const KpiCard: React.FC<{ kpi: Kpi; run: boolean; delay: number }> = ({ kpi, run, delay }) => {
   const base = useCountUp(kpi.value, run, kpi.decimals ?? 0);
-  const [live, setLive] = useState(0);
-
-  useEffect(() => {
-    if (!kpi.live || !run) return;
-    const t = window.setInterval(() => setLive((v) => v + Math.floor(Math.random() * 5)), 3000);
-    return () => window.clearInterval(t);
-  }, [kpi.live, run]);
-
-  const display = kpi.decimals ? format(base, kpi.decimals) : format(base + live);
+  const display = kpi.decimals ? format(base, kpi.decimals) : format(base);
 
   return (
     <motion.div

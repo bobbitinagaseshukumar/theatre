@@ -99,7 +99,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
         <button
           type="submit"
           aria-label="Submit search"
-          className="absolute right-1 inset-y-1 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
+          className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
         >
           {loading ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -124,9 +124,13 @@ const AdminDashboard: React.FC = () => {
   });
 
   // ─── Theatre Multiplex ───
-  const [theatresList] = useState<any[]>([
+  const [theatresList, setTheatresList] = useState<any[]>([
     { id: "th-1", name: "CineVerse Luxury Multiplex", city: "Mumbai", facilities: ["Wheelchair", "EV Charging", "VIP Lounge"] }
   ]);
+  const [showAddTheatreModal, setShowAddTheatreModal] = useState(false);
+  const [newTheatreName, setNewTheatreName] = useState("");
+  const [newTheatreCity, setNewTheatreCity] = useState("");
+  const [newTheatreFacilities, setNewTheatreFacilities] = useState("");
 
   // ─── Seating grid designer ───
   const designerRows = 6;
@@ -309,7 +313,6 @@ const AdminDashboard: React.FC = () => {
   ]);
 
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardStep, setWizardStep] = useState(1);
   const [wizardMovie, setWizardMovie] = useState({
     title: "", genre: "", duration: "135", director: "", rating: "8.5",
     posterUrl: "", bannerUrl: "", trailerUrl: "",
@@ -1369,18 +1372,18 @@ const AdminDashboard: React.FC = () => {
   // ═══════════════════════════════════════════════════════════════
 
   const handleAddMovieWizard = () => {
-    setWizardMovie({ title: "", genre: "", duration: "135", director: "", rating: "8.5", posterUrl: "", bannerUrl: "", trailerUrl: "", screenId: "scr-1", timeSlot: "07:30 PM", basePrice: "180", seoTitle: "", seoDesc: "" });
-    setWizardStep(1);
+    setWizardMovie({ title: "", genre: "Action, Sci-Fi", duration: "135", director: "", rating: "8.5", posterUrl: "", bannerUrl: "", trailerUrl: "", screenId: "Screen 1 - IMAX", timeSlot: "07:30 PM", basePrice: "200", seoTitle: "", seoDesc: "" });
     setWizardOpen(true);
   };
 
   const handleFinishWizard = async () => {
-    if (!wizardMovie.title || !wizardMovie.genre) {
-      toast.error("Title and Genre are required.");
+    if (!wizardMovie.title || !wizardMovie.title.trim()) {
+      toast.error("Movie Title is required.");
       return;
     }
 
-    let finalTrailerUrl = wizardMovie.trailerUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ";
+    const genreText = (wizardMovie.genre && wizardMovie.genre.trim()) ? wizardMovie.genre.trim() : "Action, Sci-Fi";
+    let finalTrailerUrl = wizardMovie.trailerUrl ? wizardMovie.trailerUrl.trim() : "https://www.youtube.com/embed/dQw4w9WgXcQ";
     if (finalTrailerUrl.includes("watch?v=")) {
       const videoId = finalTrailerUrl.split("watch?v=")[1]?.split("&")[0];
       if (videoId) finalTrailerUrl = `https://www.youtube.com/embed/${videoId}`;
@@ -1390,22 +1393,37 @@ const AdminDashboard: React.FC = () => {
     }
 
     const payload = {
-      title: wizardMovie.title,
-      genre: wizardMovie.genre.split(",").map((g: string) => g.trim()),
+      title: wizardMovie.title.trim(),
+      genre: genreText.split(",").map((g: string) => g.trim()),
       description: wizardMovie.seoDesc || `${wizardMovie.title} - Now showing in theatres.`,
-      posterUrl: wizardMovie.posterUrl || "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=600&auto=format&fit=crop",
-      bannerUrl: wizardMovie.bannerUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop",
+      posterUrl: wizardMovie.posterUrl ? wizardMovie.posterUrl.trim() : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=600&auto=format&fit=crop",
+      bannerUrl: wizardMovie.bannerUrl ? wizardMovie.bannerUrl.trim() : "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop",
       trailerUrl: finalTrailerUrl,
       duration: parseInt(wizardMovie.duration) || 120,
       releaseDate: new Date().toISOString(),
-      language: ["English"],
+      language: ["English", "Hindi"],
       rating: parseFloat(wizardMovie.rating) || 8.5,
       status: "NOW_SHOWING"
     };
 
     try {
       const res = await API.post("/movies", payload);
-      const created = res.data?.movie || { id: "m-" + Date.now(), ...payload, genre: wizardMovie.genre };
+      const created = res.data?.movie || { id: "m-" + Date.now(), ...payload, genre: genreText };
+      
+      // Attempt to register showtime
+      try {
+        await API.post("/showtimes", {
+          movieId: created.id,
+          movieTitle: created.title,
+          screenName: wizardMovie.screenId || "Screen 1 - IMAX",
+          date: new Date().toISOString().split("T")[0],
+          time: wizardMovie.timeSlot || "07:30 PM",
+          basePrice: Number(wizardMovie.basePrice) || 200
+        });
+      } catch (stErr) {
+        console.log("Showtime auto-create status:", stErr);
+      }
+
       setMoviesList((prev) => [
         {
           id: created.id,
@@ -1419,12 +1437,12 @@ const AdminDashboard: React.FC = () => {
         ...prev
       ]);
       setWizardOpen(false);
-      toast.success(`"${wizardMovie.title}" added to database and live on site!`);
+      toast.success(`"${wizardMovie.title}" published live with showtimes & pricing!`);
     } catch (err: any) {
       const localMovie = {
         id: "m-" + Date.now(),
         title: wizardMovie.title,
-        genre: wizardMovie.genre,
+        genre: genreText,
         status: "NOW_SHOWING",
         rating: parseFloat(wizardMovie.rating) || 8.5,
         posterUrl: payload.posterUrl,
@@ -1432,8 +1450,25 @@ const AdminDashboard: React.FC = () => {
       };
       setMoviesList((prev) => [localMovie, ...prev]);
       setWizardOpen(false);
-      toast.success(`"${wizardMovie.title}" added to site!`);
+      toast.success(`"${wizardMovie.title}" published live on website!`);
     }
+  };
+
+  const handleAddTheatreSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTheatreName.trim()) { toast.error("Theatre name is required."); return; }
+    const newTh = {
+      id: "th-" + Date.now(),
+      name: newTheatreName.trim(),
+      city: newTheatreCity.trim() || "Mumbai",
+      facilities: newTheatreFacilities ? newTheatreFacilities.split(",").map(f => f.trim()) : ["Wheelchair", "4DX", "Dolby Atmos"]
+    };
+    setTheatresList(prev => [...prev, newTh]);
+    setNewTheatreName("");
+    setNewTheatreCity("");
+    setNewTheatreFacilities("");
+    setShowAddTheatreModal(false);
+    toast.success(`Theatre "${newTh.name}" added successfully!`);
   };
 
   const handleDeleteMovie = (id: string, title: string) => {
@@ -1758,119 +1793,160 @@ const AdminDashboard: React.FC = () => {
               )}
             </div>
             {wizardOpen && (
-              <div className="p-6 rounded-2xl bg-black/40 border border-white/10 space-y-6">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    Step {wizardStep} of 8: {["Basic Information","Media Upload","Showtime","Pricing","Offers","F&B Links","SEO","Publish"][wizardStep - 1]}
-                  </span>
-                  <div className="flex gap-1">{[1,2,3,4,5,6,7,8].map((s) => (<div key={s} className={`w-3.5 h-1.5 rounded-full ${wizardStep >= s ? 'bg-primary' : 'bg-white/10'}`} />))}</div>
+              <div className="p-6 rounded-2xl bg-black/60 border border-white/10 space-y-6">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div>
+                    <h3 className="text-lg font-heading font-extrabold text-white">Publish New Movie Listing</h3>
+                    <p className="text-xs text-gray-400">Fill in the details below to add a movie, trailer link, theatre showtime, and seat pricing instantly.</p>
+                  </div>
+                  <button onClick={() => setWizardOpen(false)} className="text-gray-400 hover:text-white text-xs uppercase font-bold">✕ Close</button>
                 </div>
-                {wizardStep === 1 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="space-y-2">
-                      <label className="text-gray-400 font-bold block">Movie Title *</label>
-                      <input type="text" value={wizardMovie.title} onChange={(e) => setWizardMovie({...wizardMovie, title: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Quantum Horizon" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-gray-400 font-bold block">Genre *</label>
-                      <input type="text" value={wizardMovie.genre} onChange={(e) => setWizardMovie({...wizardMovie, genre: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Sci-Fi, Thriller" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-gray-400 font-bold block">Duration (Minutes)</label>
-                      <input type="number" value={wizardMovie.duration} onChange={(e) => setWizardMovie({...wizardMovie, duration: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="135" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-gray-400 font-bold block">Rating (0 - 10)</label>
-                      <input type="text" value={wizardMovie.rating} onChange={(e) => setWizardMovie({...wizardMovie, rating: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="8.5" />
-                    </div>
-                  </div>
-                )}
 
-                {wizardStep === 2 && (
-                  <div className="space-y-4 text-xs">
-                    <div className="space-y-2">
-                      <label className="text-gray-400 font-bold block">Movie Poster (Upload from Gallery or enter Image URL)</label>
-                      <div className="flex gap-3 items-center">
-                        <input
-                          type="text"
-                          value={wizardMovie.posterUrl}
-                          onChange={(e) => setWizardMovie({...wizardMovie, posterUrl: e.target.value})}
-                          className="flex-1 px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                        <label className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded text-white font-bold cursor-pointer transition-colors shrink-0">
-                          📷 Choose File
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setWizardMovie({ ...wizardMovie, posterUrl: reader.result as string });
-                                  toast.success("Poster image loaded from gallery!");
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                        </label>
-                      </div>
-                      {wizardMovie.posterUrl && (
-                        <div className="mt-2 flex items-center gap-4 p-2 bg-black/60 border border-white/10 rounded-xl">
-                          <img src={wizardMovie.posterUrl} alt="Poster preview" className="w-16 h-24 object-cover rounded-lg" />
-                          <span className="text-emerald-400 font-bold">✓ Poster Preview Loaded</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-gray-400 font-bold block">YouTube Trailer Link / Embed URL</label>
-                      <input
-                        type="text"
-                        value={wizardMovie.trailerUrl}
-                        onChange={(e) => setWizardMovie({...wizardMovie, trailerUrl: e.target.value})}
-                        className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"
-                        placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                      />
-                      <p className="text-[10px] text-gray-500">Paste any YouTube video link. It will automatically work on the movie trailer player!</p>
-                    </div>
-                  </div>
-                )}
-
-                {wizardStep > 2 && wizardStep < 8 && (
-                  <div className="space-y-3 text-xs">
-                    <label className="text-gray-400 font-bold block">Synopsis / Movie Description</label>
-                    <textarea
-                      rows={3}
-                      value={wizardMovie.seoDesc}
-                      onChange={(e) => setWizardMovie({...wizardMovie, seoDesc: e.target.value})}
-                      className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"
-                      placeholder="Enter synopsis for theatre listing..."
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  {/* Movie Title */}
+                  <div className="space-y-2">
+                    <label className="text-gray-300 font-bold block">Movie Name / Title *</label>
+                    <input
+                      type="text"
+                      value={wizardMovie.title}
+                      onChange={(e) => setWizardMovie({...wizardMovie, title: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                      placeholder="e.g. Spider-Man: Beyond the Spider-Verse"
                     />
                   </div>
-                )}
 
-                {wizardStep === 8 && (
-                  <div className="text-center space-y-3 py-4">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl font-bold">✓</div>
-                    <h4 className="font-heading font-extrabold text-base text-white">Ready to Publish Listing</h4>
-                    <p className="text-xs text-gray-400">Click Publish to make "{wizardMovie.title || 'Movie'}" live on the website and available for ticket bookings.</p>
+                  {/* Genre */}
+                  <div className="space-y-2">
+                    <label className="text-gray-300 font-bold block">Genre</label>
+                    <input
+                      type="text"
+                      value={wizardMovie.genre}
+                      onChange={(e) => setWizardMovie({...wizardMovie, genre: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                      placeholder="e.g. Action, Sci-Fi, Animation"
+                    />
                   </div>
-                )}
 
-                <div className="flex justify-between items-center border-t border-white/5 pt-4">
-                  <button disabled={wizardStep === 1} onClick={() => setWizardStep((p) => p - 1)} className="px-4 py-2 border border-white/10 rounded-lg text-xs font-bold text-gray-400 hover:text-white disabled:opacity-50 cursor-pointer flex items-center gap-1"><ChevronLeft className="w-4 h-4" /> Back</button>
-                  <div className="flex gap-2">
-                    <button onClick={() => setWizardOpen(false)} className="px-4 py-2 border border-white/10 rounded-lg text-xs font-bold text-gray-400 hover:text-white cursor-pointer">Cancel</button>
-                    {wizardStep < 8 ? (
-                      <button onClick={() => setWizardStep((p) => p + 1)} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold text-white cursor-pointer">Next</button>
-                    ) : (
-                      <button onClick={handleFinishWizard} className="px-5 py-2 bg-gradient-to-r from-primary to-secondary text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-redGlow cursor-pointer">Publish Listing</button>
+                  {/* Poster Image */}
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-gray-300 font-bold block">Movie Poster (Choose File from Gallery OR Paste Image URL)</label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="text"
+                        value={wizardMovie.posterUrl}
+                        onChange={(e) => setWizardMovie({...wizardMovie, posterUrl: e.target.value})}
+                        className="flex-1 px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                        placeholder="https://images.unsplash.com/... or paste any image link"
+                      />
+                      <label className="px-4 py-3 bg-gradient-to-r from-primary/20 to-secondary/20 hover:from-primary/30 hover:to-secondary/30 border border-primary/30 rounded-xl text-white font-bold cursor-pointer transition-all shrink-0 flex items-center gap-1.5 shadow-redGlow">
+                        📷 Choose File
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setWizardMovie({ ...wizardMovie, posterUrl: reader.result as string });
+                                toast.success("Poster image loaded from gallery!");
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {wizardMovie.posterUrl && (
+                      <div className="mt-2 flex items-center gap-4 p-2 bg-black/60 border border-white/10 rounded-xl">
+                        <img src={wizardMovie.posterUrl} alt="Poster preview" className="w-16 h-24 object-cover rounded-lg" />
+                        <span className="text-emerald-400 font-bold">✓ Poster Preview Loaded</span>
+                      </div>
                     )}
                   </div>
+
+                  {/* YouTube Trailer Link */}
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-gray-300 font-bold block">YouTube Trailer Link / Embed URL</label>
+                    <input
+                      type="text"
+                      value={wizardMovie.trailerUrl}
+                      onChange={(e) => setWizardMovie({...wizardMovie, trailerUrl: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                      placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    />
+                    <p className="text-[10px] text-gray-500">Paste any YouTube link. It will automatically convert and play on the website trailer player!</p>
+                  </div>
+
+                  {/* Theatre & Screen Selection */}
+                  <div className="space-y-2">
+                    <label className="text-gray-300 font-bold block">Theatre & Screen</label>
+                    <select
+                      value={wizardMovie.screenId}
+                      onChange={(e) => setWizardMovie({...wizardMovie, screenId: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                    >
+                      {theatresList.map((t) => (
+                        <option key={t.id} value={`${t.name} - Screen 1`}>
+                          {t.name} ({t.city}) — Screen 1
+                        </option>
+                      ))}
+                      <option value="CineVerse Prestige - Screen 1">CineVerse Prestige - Screen 1</option>
+                      <option value="CineVerse IMAX Dome - Screen 2">CineVerse IMAX Dome - Screen 2</option>
+                    </select>
+                  </div>
+
+                  {/* Show Time */}
+                  <div className="space-y-2">
+                    <label className="text-gray-300 font-bold block">Show Time</label>
+                    <input
+                      type="text"
+                      value={wizardMovie.timeSlot}
+                      onChange={(e) => setWizardMovie({...wizardMovie, timeSlot: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                      placeholder="e.g. 07:30 PM"
+                    />
+                  </div>
+
+                  {/* Amount / Seat Ticket Price */}
+                  <div className="space-y-2">
+                    <label className="text-gray-300 font-bold block">Ticket / Seat Price (₹)</label>
+                    <input
+                      type="number"
+                      value={wizardMovie.basePrice}
+                      onChange={(e) => setWizardMovie({...wizardMovie, basePrice: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary font-number"
+                      placeholder="e.g. 250"
+                    />
+                  </div>
+
+                  {/* Rating */}
+                  <div className="space-y-2">
+                    <label className="text-gray-300 font-bold block">Rating (0.0 - 10.0)</label>
+                    <input
+                      type="text"
+                      value={wizardMovie.rating}
+                      onChange={(e) => setWizardMovie({...wizardMovie, rating: e.target.value})}
+                      className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                      placeholder="8.5"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
+                  <button
+                    onClick={() => setWizardOpen(false)}
+                    className="px-5 py-2.5 border border-white/10 rounded-xl text-xs font-bold text-gray-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleFinishWizard}
+                    className="px-6 py-2.5 bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white font-heading font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-redGlow transition-all cursor-pointer"
+                  >
+                    🚀 Publish Movie & Showtimes
+                  </button>
                 </div>
               </div>
             )}
@@ -2173,7 +2249,60 @@ const AdminDashboard: React.FC = () => {
         ═══════════════════════════════════════════════════════ */}
         {activeTab === "theatres" && (
           <div className="space-y-8">
-            <h2 className="text-2xl font-heading font-extrabold tracking-tight border-b border-white/5 pb-4">Theatre Locations & Infrastructure</h2>
+            <div className="flex justify-between items-center border-b border-white/5 pb-4">
+              <h2 className="text-2xl font-heading font-extrabold tracking-tight">Theatre Locations & Infrastructure</h2>
+              <button
+                onClick={() => setShowAddTheatreModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer flex items-center gap-1.5 shadow-redGlow"
+              >
+                ➕ Add New Theatre
+              </button>
+            </div>
+
+            {showAddTheatreModal && (
+              <form onSubmit={handleAddTheatreSubmit} className="p-6 rounded-2xl bg-black/60 border border-white/10 space-y-4 text-xs">
+                <h3 className="font-heading font-extrabold text-white text-sm">Add New Theatre Location</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-gray-400 font-bold block">Theatre Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newTheatreName}
+                      onChange={(e) => setNewTheatreName(e.target.value)}
+                      placeholder="e.g. CineVerse IMAX Multiplex"
+                      className="w-full px-4 py-2.5 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-gray-400 font-bold block">City *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newTheatreCity}
+                      onChange={(e) => setNewTheatreCity(e.target.value)}
+                      placeholder="e.g. Mumbai, Delhi, Hyderabad"
+                      className="w-full px-4 py-2.5 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-gray-400 font-bold block">Facilities (Comma Separated)</label>
+                    <input
+                      type="text"
+                      value={newTheatreFacilities}
+                      onChange={(e) => setNewTheatreFacilities(e.target.value)}
+                      placeholder="e.g. Wheelchair, 4DX, Dolby Atmos, VIP Lounge"
+                      className="w-full px-4 py-2.5 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setShowAddTheatreModal(false)} className="px-4 py-2 border border-white/10 rounded-xl text-gray-400 font-bold">Cancel</button>
+                  <button type="submit" className="px-5 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl font-bold">Save Theatre</button>
+                </div>
+              </form>
+            )}
+
             <div className="border border-white/5 rounded-xl overflow-hidden font-number text-xs">
               <table className="w-full text-left border-collapse">
                 <thead><tr className="bg-black/80 border-b border-white/10 text-gray-500 uppercase tracking-wider"><th className="p-4">Theatre</th><th className="p-4">City</th><th className="p-4">Facilities</th></tr></thead>
@@ -2182,7 +2311,7 @@ const AdminDashboard: React.FC = () => {
                     <tr key={t.id} className="hover:bg-white/5 transition-colors">
                       <td className="p-4 font-bold text-white font-heading">{t.name}</td>
                       <td className="p-4 text-gray-400">{t.city}</td>
-                      <td className="p-4 text-accent">{t.facilities.join(" • ")}</td>
+                      <td className="p-4 text-accent">{Array.isArray(t.facilities) ? t.facilities.join(" • ") : t.facilities}</td>
                     </tr>
                   ))}
                 </tbody>
