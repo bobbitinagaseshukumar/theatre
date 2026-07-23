@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { motion } from "framer-motion";
-import { LogOut, LayoutDashboard, User, ChevronDown, Ticket, Menu, X } from "lucide-react";
+import { LogOut, LayoutDashboard, User, ChevronDown, Ticket, Menu, X, Search } from "lucide-react";
 import type { RootState } from "../redux/store";
 import { logout } from "../redux/authSlice";
 import SearchBar from "./SearchBar";
@@ -14,6 +14,7 @@ const Navbar: React.FC = () => {
   const [logoRotation, setLogoRotation] = useState({ x: 0, y: 0 });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
@@ -78,6 +79,7 @@ const Navbar: React.FC = () => {
 
   useEffect(() => {
     setMobileOpen(false);
+    setMobileSearchOpen(false);
     setShowProfileMenu(false);
   }, [location.pathname, location.search]);
 
@@ -143,10 +145,20 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* RIGHT: Search & User Controls */}
-        <div className="flex items-center gap-1.5 sm:gap-4 lg:gap-6">
+        <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-5">
           
-          {/* Autocomplete Search Bar */}
-          <div className="hidden md:block">
+          {/* Mobile Search Toggle Icon */}
+          <button
+            type="button"
+            onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+            aria-label="Toggle search bar"
+            className="inline-flex md:hidden items-center justify-center rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 hover:border-primary hover:text-white"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+
+          {/* Autocomplete Search Bar for Desktop */}
+          <div className="hidden md:block shrink-0">
             <SearchBar />
           </div>
 
@@ -230,6 +242,14 @@ const Navbar: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Mobile Search Dropdown Bar */}
+      {mobileSearchOpen && (
+        <div className="md:hidden absolute left-0 right-0 top-[76px] bg-[#0a0a0d] border-b border-white/10 p-3 z-50 shadow-2xl">
+          <SearchBar />
+        </div>
+      )}
+
       {mobileOpen && (
         <div className="fixed inset-x-0 top-[76px] sm:top-[90px] bottom-0 bg-[#0a0a0d] border-t border-white/10 z-[999] px-4 sm:px-6 py-6 sm:py-8 overflow-y-auto space-y-6 flex flex-col justify-start">
           {/* Mobile Search Bar */}
