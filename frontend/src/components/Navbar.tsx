@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* CENTER: Luxury Hover Menus */}
-        <div className="hidden lg:flex items-center gap-4 xl:gap-8">
+        <div className="hidden xl:flex items-center gap-6">
           {menuItems.map((item) => {
             const active = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
             return (
@@ -214,7 +214,7 @@ const Navbar: React.FC = () => {
             onClick={() => setMobileOpen((open) => !open)}
             aria-label="Open mobile menu"
             aria-expanded={mobileOpen}
-            className="inline-flex lg:hidden items-center justify-center rounded-lg border border-white/10 bg-white/5 p-2 text-gray-300 hover:border-accent hover:text-white"
+            className="inline-flex xl:hidden items-center justify-center rounded-lg border border-white/10 bg-white/5 p-2 text-gray-300 hover:border-accent hover:text-white"
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
