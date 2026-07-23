@@ -122,7 +122,7 @@ const Booking: React.FC = () => {
   const [introActive, setIntroActive] = useState(true);
   const [timerCount, setTimerCount] = useState(600); 
   const [seatLayout, setSeatLayout] = useState<any[]>([]);
-  const [liveBlockedSeats, setLiveBlockedSeats] = useState<string[]>([]);
+  const [liveBlockedSeats] = useState<string[]>([]);
   
   // Intelligent Booking parameters
   const [groupSize, setGroupSize] = useState<number>(2);
@@ -222,28 +222,6 @@ const Booking: React.FC = () => {
     setSeatLayout(seatsList);
   }, [showtime]);
 
-  // Mock live seat bookings trigger
-  useEffect(() => {
-    if (introActive || isOffline) return;
-    const interval = setInterval(() => {
-      const available = seatLayout.filter((s) => s.type !== "BOOKED" && s.type !== "BLOCKED" && !selectedSeats.some((sel) => sel.id === s.id));
-      if (available.length > 0) {
-        const randomSeat = available[Math.floor(Math.random() * available.length)];
-        setLiveBlockedSeats((prev) => [...prev, randomSeat.id]);
-        toast(`Seat ${randomSeat.seatNumber} was just booked by another customer.`, {
-          icon: "🎟️",
-          style: {
-            background: "#0c0505",
-            color: "#e50914",
-            border: "1px solid rgba(229,9,20,0.15)"
-          }
-        });
-      }
-    }, 24000);
-
-    return () => clearInterval(interval);
-  }, [seatLayout, selectedSeats, introActive, isOffline]);
-
   if (!movie || !showtime) return null;
 
   // Format Timer output
@@ -314,27 +292,6 @@ const Booking: React.FC = () => {
       type: seat.type,
       price: seat.price
     }));
-
-    // Asynchronous background check for isolated seat warnings without delaying UI
-    if (!isAlreadySelected) {
-      const selectedIds = [...selectedSeats.map((s) => s.id), seat.id];
-      const bookedIds = [...liveBlockedSeats, ...seatLayout.filter((s) => s.type === "BOOKED").map((s) => s.id)];
-      const blockedIds = seatLayout.filter((s) => s.type === "BLOCKED").map((s) => s.id);
-
-      API.post("/booking-engine/validate-selection", {
-        selectedSeats: selectedIds,
-        bookedSeats: bookedIds,
-        blockedSeats: blockedIds
-      }).then((valRes) => {
-        if (valRes.data && !valRes.data.valid) {
-          setPendingSelection(seat);
-          setPendingIsolatedSeat(seatLayout.find((s) => s.id === valRes.data.isolatedSeatId));
-          setIsolatedWarning(valRes.data.warning);
-        }
-      }).catch(() => {
-        // Ignore validation error gracefully
-      });
-    }
   };
 
   const handleConfirmIsolatedSelectAll = () => {
