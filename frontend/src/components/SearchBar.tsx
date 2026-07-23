@@ -80,7 +80,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
   };
 
   return (
-    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-full max-w-[420px] h-10 sm:h-11">
+    <form ref={dropdownRef} onSubmit={handleSubmit} role="search" className="relative w-full max-w-[200px] sm:max-w-[260px] lg:max-w-[320px] h-9 sm:h-10 select-none">
       <div className="relative flex items-center w-full h-full group">
         {/* Search Input Box */}
         <input
@@ -92,19 +92,19 @@ const SearchBar: React.FC<SearchBarProps> = ({ suggestionsEnabled = true }) => {
           placeholder="Search Movies..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full h-full pl-4 pr-12 rounded-full bg-white/5 hover:bg-white/10 focus:bg-black/80 border border-white/10 focus:border-primary text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/50 text-xs sm:text-sm transition-all duration-300"
+          className="w-full h-full pl-3.5 pr-10 rounded-full bg-white/5 hover:bg-white/10 focus:bg-black/90 border border-white/10 focus:border-primary text-white placeholder-gray-400 focus:outline-none text-xs transition-all duration-300"
         />
 
         {/* Interactive Search Action Button */}
         <button
           type="submit"
           aria-label="Submit search"
-          className="absolute right-1 sm:right-1.5 inset-y-1 sm:inset-y-1 w-8 sm:w-9 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
+          className="absolute right-1 inset-y-1 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-primary to-secondary hover:scale-105 active:scale-95 text-white flex items-center justify-center shadow-redGlow transition-all cursor-pointer"
         >
           {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
-            <Search className="w-4 h-4" />
+            <Search className="w-3.5 h-3.5" />
           )}
         </button>
       </div>

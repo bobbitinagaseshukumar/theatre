@@ -14,7 +14,6 @@ import UpcomingMoviesSection from "../components/UpcomingMoviesSection";
 import AnnouncementBar from "../components/home/AnnouncementBar";
 import QuickStats from "../components/home/QuickStats";
 import TrendingSection from "../components/home/TrendingSection";
-import FoodCombosSection from "../components/home/FoodCombosSection";
 import MembershipSection from "../components/home/MembershipSection";
 import ReviewsSection from "../components/home/ReviewsSection";
 
@@ -71,7 +70,7 @@ const MOCK_MOVIES = [
 ];
 
 const Home: React.FC = () => {
-  const [movies, setMovies] = useState<any[]>(MOCK_MOVIES);
+  const [movies, setMovies] = useState<any[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [activeTrailerUrl, setActiveTrailerUrl] = useState("");
@@ -85,20 +84,25 @@ const Home: React.FC = () => {
     const fetchHomeMovies = async () => {
       try {
         const res = await API.get("/movies");
-        if (active && res.data && res.data.length > 0) {
-          // Map default glow colors to dynamic listings
-          const mapped = res.data.map((m: any, idx: number) => ({
-            ...m,
-            glowColor: idx % 3 === 0 ? "blue" : idx % 3 === 1 ? "red" : "purple"
-          }));
-          setMovies(mapped);
+        if (active && res.data && Array.isArray(res.data)) {
+          if (res.data.length > 0) {
+            const mapped = res.data.map((m: any, idx: number) => ({
+              ...m,
+              glowColor: idx % 3 === 0 ? "blue" : idx % 3 === 1 ? "red" : "purple"
+            }));
+            setMovies(mapped);
+          } else {
+            setMovies([]);
+          }
         }
       } catch {
-        /* seed mock list */
+        if (active && movies.length === 0) {
+          setMovies(MOCK_MOVIES);
+        }
       }
     };
     fetchHomeMovies();
-    const pollInterval = setInterval(fetchHomeMovies, 5000);
+    const pollInterval = setInterval(fetchHomeMovies, 4000);
     return () => {
       active = false;
       clearInterval(pollInterval);
@@ -444,22 +448,23 @@ const Home: React.FC = () => {
       {/* Trending Movies (design-system MovieCard with 3D tilt) */}
       <TrendingSection movies={movies} />
 
-      {/* Food Combos */}
-      <FoodCombosSection />
-
       {/* Membership CTA */}
       <MembershipSection />
 
       {/* Customer Reviews */}
       <ReviewsSection />
 
-      {/* 4. TRAILER IFRAME DIALOG POPUP */}
+      {/* 4. TRAILER IFRAME DIALOG POPUP (click outside backdrop to close) */}
       {trailerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+        <div 
+          onClick={() => setTrailerOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 cursor-pointer"
+        >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-glass bg-[#0d0d0d] flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-glass bg-[#0d0d0d] flex items-center justify-center cursor-default"
           >
             <button
               onClick={() => setTrailerOpen(false)}

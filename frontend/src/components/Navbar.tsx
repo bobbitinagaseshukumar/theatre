@@ -21,6 +21,8 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { t } = useI18n();
 
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
   // Scroll handler to toggle transparent vs glass layout
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +34,17 @@ const Navbar: React.FC = () => {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Click outside to close profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Handle logo 3D mouse rotation (rotates up to 5 degrees)
@@ -58,7 +71,6 @@ const Navbar: React.FC = () => {
     { name: t("nav.theatres"), path: "/theatres" },
     { name: "Upcoming", path: "/movies?status=upcoming" },
     { name: t("nav.offers"), path: "/offers" },
-    { name: t("nav.food"), path: "/food" },
     { name: t("nav.contact"), path: "/contact" },
   ];
 
@@ -145,7 +157,7 @@ const Navbar: React.FC = () => {
 
           {/* User Profile dropdown */}
           {user ? (
-            <div className="relative">
+            <div className="relative select-none" ref={dropdownRef}>
               <button 
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 aria-label="Open account menu"

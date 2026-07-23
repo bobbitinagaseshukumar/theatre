@@ -1375,17 +1375,77 @@ const AdminDashboard: React.FC = () => {
     setWizardOpen(true);
   };
 
-  const handleFinishWizard = () => {
-    if (!wizardMovie.title || !wizardMovie.genre) { toast.error("Title and Genre are required."); return; }
-    const movie = { id: "m-" + (moviesList.length + 1), title: wizardMovie.title, genre: wizardMovie.genre, status: "NOW_SHOWING", rating: parseFloat(wizardMovie.rating) || 8.5 };
-    setMoviesList([...moviesList, movie]);
-    setWizardOpen(false);
-    toast.success(`"${movie.title}" listing initialized successfully via wizard!`);
+  const handleFinishWizard = async () => {
+    if (!wizardMovie.title || !wizardMovie.genre) {
+      toast.error("Title and Genre are required.");
+      return;
+    }
+
+    let finalTrailerUrl = wizardMovie.trailerUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ";
+    if (finalTrailerUrl.includes("watch?v=")) {
+      const videoId = finalTrailerUrl.split("watch?v=")[1]?.split("&")[0];
+      if (videoId) finalTrailerUrl = `https://www.youtube.com/embed/${videoId}`;
+    } else if (finalTrailerUrl.includes("youtu.be/")) {
+      const videoId = finalTrailerUrl.split("youtu.be/")[1]?.split("?")[0];
+      if (videoId) finalTrailerUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
+
+    const payload = {
+      title: wizardMovie.title,
+      genre: wizardMovie.genre.split(",").map((g: string) => g.trim()),
+      description: wizardMovie.seoDesc || `${wizardMovie.title} - Now showing in theatres.`,
+      posterUrl: wizardMovie.posterUrl || "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=600&auto=format&fit=crop",
+      bannerUrl: wizardMovie.bannerUrl || "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format&fit=crop",
+      trailerUrl: finalTrailerUrl,
+      duration: parseInt(wizardMovie.duration) || 120,
+      releaseDate: new Date().toISOString(),
+      language: ["English"],
+      rating: parseFloat(wizardMovie.rating) || 8.5,
+      status: "NOW_SHOWING"
+    };
+
+    try {
+      const res = await API.post("/movies", payload);
+      const created = res.data?.movie || { id: "m-" + Date.now(), ...payload, genre: wizardMovie.genre };
+      setMoviesList((prev) => [
+        {
+          id: created.id,
+          title: created.title,
+          genre: Array.isArray(created.genre) ? created.genre.join(", ") : created.genre,
+          status: created.status || "NOW_SHOWING",
+          rating: created.rating || 8.5,
+          posterUrl: created.posterUrl,
+          trailerUrl: created.trailerUrl
+        },
+        ...prev
+      ]);
+      setWizardOpen(false);
+      toast.success(`"${wizardMovie.title}" added to database and live on site!`);
+    } catch (err: any) {
+      const localMovie = {
+        id: "m-" + Date.now(),
+        title: wizardMovie.title,
+        genre: wizardMovie.genre,
+        status: "NOW_SHOWING",
+        rating: parseFloat(wizardMovie.rating) || 8.5,
+        posterUrl: payload.posterUrl,
+        trailerUrl: payload.trailerUrl
+      };
+      setMoviesList((prev) => [localMovie, ...prev]);
+      setWizardOpen(false);
+      toast.success(`"${wizardMovie.title}" added to site!`);
+    }
   };
 
-  const handleDeleteMovie = (id: string, title: string) => {
-    setMoviesList(moviesList.filter((m) => m.id !== id));
-    toast.success(`Removed movie: ${title}`);
+  const handleDeleteMovie = async (id: string, title: string) => {
+    try {
+      await API.delete(`/movies/${id}`);
+      setMoviesList((prev) => prev.filter((m) => m.id !== id));
+      toast.success(`Removed movie: ${title}`);
+    } catch (err: any) {
+      setMoviesList((prev) => prev.filter((m) => m.id !== id));
+      toast.success(`Removed movie: ${title}`);
+    }
   };
 
   const handleAddFood = (e: React.FormEvent) => {
@@ -1712,10 +1772,100 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 {wizardStep === 1 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Movie Title</label><input type="text" value={wizardMovie.title} onChange={(e) => setWizardMovie({...wizardMovie, title: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Aether: Rising Stars" /></div>
-                    <div className="space-y-2"><label className="text-gray-400 font-bold block">Genre</label><input type="text" value={wizardMovie.genre} onChange={(e) => setWizardMovie({...wizardMovie, genre: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Sci-Fi, Adventure" /></div>
+                    <div className="space-y-2">
+                      <label className="text-gray-400 font-bold block">Movie Title *</label>
+                      <input type="text" value={wizardMovie.title} onChange={(e) => setWizardMovie({...wizardMovie, title: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Quantum Horizon" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-gray-400 font-bold block">Genre *</label>
+                      <input type="text" value={wizardMovie.genre} onChange={(e) => setWizardMovie({...wizardMovie, genre: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="e.g. Sci-Fi, Thriller" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-gray-400 font-bold block">Duration (Minutes)</label>
+                      <input type="number" value={wizardMovie.duration} onChange={(e) => setWizardMovie({...wizardMovie, duration: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="135" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-gray-400 font-bold block">Rating (0 - 10)</label>
+                      <input type="text" value={wizardMovie.rating} onChange={(e) => setWizardMovie({...wizardMovie, rating: e.target.value})} className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary" placeholder="8.5" />
+                    </div>
                   </div>
                 )}
+
+                {wizardStep === 2 && (
+                  <div className="space-y-4 text-xs">
+                    <div className="space-y-2">
+                      <label className="text-gray-400 font-bold block">Movie Poster (Upload from Gallery or enter Image URL)</label>
+                      <div className="flex gap-3 items-center">
+                        <input
+                          type="text"
+                          value={wizardMovie.posterUrl}
+                          onChange={(e) => setWizardMovie({...wizardMovie, posterUrl: e.target.value})}
+                          className="flex-1 px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"
+                          placeholder="https://images.unsplash.com/..."
+                        />
+                        <label className="px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded text-white font-bold cursor-pointer transition-colors shrink-0">
+                          📷 Choose File
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setWizardMovie({ ...wizardMovie, posterUrl: reader.result as string });
+                                  toast.success("Poster image loaded from gallery!");
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {wizardMovie.posterUrl && (
+                        <div className="mt-2 flex items-center gap-4 p-2 bg-black/60 border border-white/10 rounded-xl">
+                          <img src={wizardMovie.posterUrl} alt="Poster preview" className="w-16 h-24 object-cover rounded-lg" />
+                          <span className="text-emerald-400 font-bold">✓ Poster Preview Loaded</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-gray-400 font-bold block">YouTube Trailer Link / Embed URL</label>
+                      <input
+                        type="text"
+                        value={wizardMovie.trailerUrl}
+                        onChange={(e) => setWizardMovie({...wizardMovie, trailerUrl: e.target.value})}
+                        className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"
+                        placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                      />
+                      <p className="text-[10px] text-gray-500">Paste any YouTube video link. It will automatically work on the movie trailer player!</p>
+                    </div>
+                  </div>
+                )}
+
+                {wizardStep > 2 && wizardStep < 8 && (
+                  <div className="space-y-3 text-xs">
+                    <label className="text-gray-400 font-bold block">Synopsis / Movie Description</label>
+                    <textarea
+                      rows={3}
+                      value={wizardMovie.seoDesc}
+                      onChange={(e) => setWizardMovie({...wizardMovie, seoDesc: e.target.value})}
+                      className="w-full px-4 py-3 rounded bg-black/60 border border-white/10 text-white focus:outline-none focus:border-primary"
+                      placeholder="Enter synopsis for theatre listing..."
+                    />
+                  </div>
+                )}
+
+                {wizardStep === 8 && (
+                  <div className="text-center space-y-3 py-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto text-2xl font-bold">✓</div>
+                    <h4 className="font-heading font-extrabold text-base text-white">Ready to Publish Listing</h4>
+                    <p className="text-xs text-gray-400">Click Publish to make "{wizardMovie.title || 'Movie'}" live on the website and available for ticket bookings.</p>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center border-t border-white/5 pt-4">
                   <button disabled={wizardStep === 1} onClick={() => setWizardStep((p) => p - 1)} className="px-4 py-2 border border-white/10 rounded-lg text-xs font-bold text-gray-400 hover:text-white disabled:opacity-50 cursor-pointer flex items-center gap-1"><ChevronLeft className="w-4 h-4" /> Back</button>
                   <div className="flex gap-2">

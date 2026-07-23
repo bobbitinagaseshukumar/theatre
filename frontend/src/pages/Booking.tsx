@@ -552,16 +552,18 @@ const Booking: React.FC = () => {
         {/* Left Column: Theatre Screen, Intelligent Auto-Select Controls, and Seats Grid */}
         <div className="lg:col-span-8 space-y-12">
           
-          {/* Curved Screen */}
-          <div className="flex flex-col items-center gap-3 select-none">
-            <div className="w-[85%] h-6 bg-gradient-to-b from-white/90 via-zinc-400 to-black/90 rounded-b-[100px] shadow-[0_4px_25px_rgba(255,255,255,0.2)] border-b border-white/20 relative overflow-hidden">
+          {/* Curved 3D IMAX Screen with Projection Rays */}
+          <div className="flex flex-col items-center gap-3 select-none perspective-1000">
+            <div className="w-[90%] h-8 bg-gradient-to-b from-white via-slate-200 to-[#e50914]/20 rounded-b-[120px] shadow-[0_15px_40px_rgba(229,9,20,0.35)] border-b-2 border-primary/50 relative overflow-hidden transform rotateX(-12deg)">
               <motion.div
                 animate={{ x: ["-100%", "100%"] }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none"
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"
               />
             </div>
-            <span className="text-[10px] text-gray-500 font-extrabold tracking-[0.2em] uppercase">Cinema Screen</span>
+            <div className="flex items-center gap-2 text-[10px] text-primary font-extrabold tracking-[0.3em] uppercase glow-text-red">
+              <span>✦</span> <span>3D IMAX DOLBY ATMOS SCREEN</span> <span>✦</span>
+            </div>
           </div>
 
           {/* Intelligent Seat Selector Engine Controls */}
