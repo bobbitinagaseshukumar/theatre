@@ -1873,10 +1873,23 @@ const AdminDashboard: React.FC = () => {
                       type="text"
                       value={wizardMovie.trailerUrl}
                       onChange={(e) => setWizardMovie({...wizardMovie, trailerUrl: e.target.value})}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData.getData("text");
+                        if (pasted) {
+                          setWizardMovie((prev) => ({ ...prev, trailerUrl: pasted }));
+                          toast.success("Trailer URL pasted!");
+                        }
+                      }}
                       className="w-full px-4 py-3 rounded-xl bg-black/80 border border-white/10 text-white focus:outline-none focus:border-primary"
                       placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                     />
                     <p className="text-[10px] text-gray-500">Paste any YouTube link. It will automatically convert and play on the website trailer player!</p>
+                    {wizardMovie.trailerUrl && (
+                      <div className="mt-2 p-2 bg-black/60 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                        <span>▶</span>
+                        <span>Trailer URL Loaded: {wizardMovie.trailerUrl}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Theatre & Screen Selection */}

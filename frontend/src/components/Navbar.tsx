@@ -10,7 +10,6 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { useI18n } from "../i18n/I18nProvider";
 
 const Navbar: React.FC = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [logoRotation, setLogoRotation] = useState({ x: 0, y: 0 });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -23,19 +22,6 @@ const Navbar: React.FC = () => {
   const { t } = useI18n();
 
   const dropdownRef = React.useRef<HTMLDivElement>(null);
-
-  // Scroll handler to toggle transparent vs glass layout
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Click outside to close profile dropdown
   useEffect(() => {
@@ -86,11 +72,7 @@ const Navbar: React.FC = () => {
   return (
     <nav 
       aria-label="Primary navigation"
-      className={`fixed top-0 left-0 right-0 h-[76px] sm:h-[90px] z-50 transition-all duration-500 border-b ${
-        isScrolled 
-          ? "glass-panel border-white/5 bg-[#050505]/75 backdrop-blur-[25px] shadow-glass" 
-          : "bg-transparent border-transparent"
-      }`}
+      className="fixed top-0 left-0 right-0 h-[76px] sm:h-[90px] z-50 transition-all duration-500 border-b border-white/10 bg-[#050505]/90 backdrop-blur-[25px] shadow-glass"
     >
       <div className="max-w-[1600px] mx-auto h-full px-3 sm:px-6 lg:px-10 flex items-center justify-between">
         
